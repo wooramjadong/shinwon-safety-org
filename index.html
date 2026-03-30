@@ -69,6 +69,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--g90
 .doc-duty{font-size:12px;color:var(--g700);padding:2px 0 2px 12px;line-height:1.7}
 .doc-sign{margin-top:28px;padding-top:16px;border-top:1px solid var(--g200);font-size:12px;color:var(--g500)}
 .doc-sign-d{text-align:center;margin-bottom:14px}.doc-sign-n{text-align:right;font-size:14px;font-weight:700;color:var(--g900);padding-right:20px}
+.doc-manual-input{border:none;border-bottom:1px solid var(--br);padding:2px 6px;font-size:13px;font-weight:600;font-family:'Noto Sans KR',sans-serif;color:var(--g900);background:transparent;width:160px;outline:none}
+.doc-manual-input:focus{border-bottom-color:var(--brd);background:var(--brl)}
+.doc-date-input{border:none;border-bottom:1px solid var(--g300);padding:2px 4px;font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--g900);background:transparent;text-align:center;outline:none}
+.doc-date-input:focus{border-bottom-color:var(--br);background:var(--brl)}
 @media print{.hdr,.sidebar,.doc-bar,.btn-row{display:none!important}.body{display:block}.main{padding:0}.page{display:none!important}#page-doc{display:block!important}.doc-paper{box-shadow:none;border:none;max-width:100%}}
 </style>
 </head>
@@ -316,7 +320,7 @@ function updStat() {
 
 // ===== SVG ORG — 비상기구 =====
 function renderOrg() {
-  var NW=148, NH=60, SNW=96, SNH=44, GAP=14, VG=36, PAD=28;
+  var NW=148, NH=60, SNW=90, SNH=42, GAP=10, VG=36, PAD=32;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
   var FK='Noto Sans KR,sans-serif', MK='JetBrains Mono,monospace';
 
@@ -327,103 +331,143 @@ function renderOrg() {
   range(S.c.ct).forEach(function(i){ teams.push({ p:S.p['e_ct_'+i]||{}, lbl:'공사팀장', k:'e_ct_'+i }); });
   range(S.c.at).forEach(function(i){ teams.push({ p:S.p['e_at_'+i]||{}, lbl:'관리팀장', k:'e_at_'+i }); });
 
-  // 그룹 레이아웃 계산
+  // 그룹 레이아웃: 인원에 따라 열 수 자동 결정
   var groups = S.units.map(function(u) {
-    var members = range(u.count).map(function(i){ return { k:'gd_'+u.id+'_'+i, p:S.p['gd_'+u.id+'_'+i]||{}, lbl:u.name+' '+(i+1) }; });
-    var cols = members.length <= 4 ? members.length : Math.ceil(Math.sqrt(members.length));
-    cols = Math.min(cols, 5);
-    var rows2 = Math.ceil(members.length/cols);
+    var members = range(u.count).map(function(i){
+      return { k:'gd_'+u.id+'_'+i, p:S.p['gd_'+u.id+'_'+i]||{}, lbl:u.name+' '+(i+1) };
+    });
+    var n = members.length;
+    var cols = n <= 2 ? n : n <= 4 ? 2 : n <= 6 ? 3 : n <= 9 ? 3 : 4;
+    var rows2 = Math.ceil(n/cols);
     var gw = cols*(SNW+GAP)-GAP+24;
-    var gh = rows2*(SNH+8)-8+40;
+    var gh = rows2*(SNH+8)-8+44;
     return { name:u.name, members:members, cols:cols, rows:rows2, gw:gw, gh:gh };
   });
 
-  var totalGroupW = groups.reduce(function(s,g){ return s+g.gw+GAP; },0)-GAP;
-  var maxGH = groups.reduce(function(m,g){ return Math.max(m,g.gh); },0);
-
-  // 필요 너비 계산
-  var teamRowW = teams.length*(NW+GAP)-GAP;
+  // 너비 계산
   var smRowW = smList.length*(NW+GAP)-GAP;
-  var W = Math.max(teamRowW, smRowW, totalGroupW + PAD*2 + 60);
-  W = Math.max(W, 800);
+  var teamRowW = teams.length*(NW+GAP)-GAP;
+  var totalGroupW = groups.length>0 ? groups.reduce(function(s,g){ return s+g.gw+GAP; },0)-GAP : 0;
+  var W = Math.max(smRowW, teamRowW, totalGroupW) + PAD*2 + 60;
+  W = Math.max(W, 700);
 
   // Y positions
-  var y0 = PAD;
-  var y1 = y0+NH+VG;
-  var y2 = y1+NH+VG;
-  var y3 = y2 + (teams.length>0 ? NH+VG : 0);
+  var y0=PAD, y1=y0+NH+VG;
+  var y2 = smList.length>0 ? y1+NH+VG : y1;
+  var y3 = teams.length>0 ? y2+NH+VG+8 : y2+8;
 
-  var H = y3 + maxGH + PAD;
+  // 그룹 배치 (한 행에 모두 배치, 너무 넓으면 2행)
+  var MAX_ROW_W = W - PAD*2;
+  var groupRows = [];
+  if (totalGroupW <= MAX_ROW_W || groups.length <= 1) {
+    groupRows = [groups];
+  } else {
+    // 2행으로 분할
+    var half = Math.ceil(groups.length/2);
+    groupRows = [groups.slice(0,half), groups.slice(half)];
+  }
+
+  var maxRowH = 0;
+  groupRows.forEach(function(row) {
+    var rh = row.reduce(function(m,g){ return Math.max(m,g.gh); }, 0);
+    maxRowH = Math.max(maxRowH, rh);
+  });
+  var H = y3 + groupRows.length*(maxRowH+VG) + PAD;
+
+  // 그룹 x 좌표 계산
+  groupRows.forEach(function(row) {
+    var rw = row.reduce(function(s,g){ return s+g.gw+GAP; },0)-GAP;
+    var rx = W/2 - rw/2;
+    row.forEach(function(g){ g.x=rx; rx+=g.gw+GAP; });
+  });
 
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:'+FK+';display:block">';
 
-  // 소장
-  var cx0 = W/2, cy0 = y0+NH/2;
-  // 소장 → 안전관리자 연결
+  var cx0=W/2, cy0=y0+NH/2;
+
+  // 안전관리자 노드
   var smNodes = smList.map(function(p,i) {
-    var totalW = smList.length*(NW+GAP)-GAP;
-    var sx = W/2-totalW/2 + i*(NW+GAP) + NW/2;
-    return { cx:sx, cy:y1+NH/2, p:p, k:'e_sm_'+i };
+    var totalW=smList.length*(NW+GAP)-GAP;
+    var cx=W/2-totalW/2+i*(NW+GAP)+NW/2;
+    return { cx:cx, cy:y1+NH/2, p:p, k:'e_sm_'+i };
   });
 
-  // 팀장
+  // 팀장 노드
   var teamNodes = teams.map(function(t,i) {
-    var totalW = teams.length*(NW+GAP)-GAP;
-    var tx = W/2-totalW/2 + i*(NW+GAP) + NW/2;
+    var totalW=teams.length*(NW+GAP)-GAP;
+    var tx=W/2-totalW/2+i*(NW+GAP)+NW/2;
     return { cx:tx, cy:y2+NH/2, p:t.p, lbl:t.lbl, k:t.k };
   });
 
-  // 그룹 배치
-  var gStartX = W/2-totalGroupW/2;
-  groups.forEach(function(g){ g.x=gStartX; gStartX+=g.gw+GAP; });
-
   // === 연결선 ===
-  // 소장 → 안전관리자 (수평 분기)
+  // 소장 → 안전관리자
   var midY01 = cy0+NH/2+VG/2;
   svg += vline(cx0, cy0+NH/2, midY01, LC);
-  if (smNodes.length > 1) svg += hline(smNodes[0].cx, smNodes[smNodes.length-1].cx, midY01, LC);
+  if (smNodes.length>1) svg += hline(smNodes[0].cx, smNodes[smNodes.length-1].cx, midY01, LC);
   smNodes.forEach(function(n){ svg += vline(n.cx, midY01, n.cy-NH/2, LC); });
 
   // 안전관리자 → 팀장
-  if (teamNodes.length > 0 && smNodes.length > 0) {
+  if (teamNodes.length>0 && smNodes.length>0) {
     var midY12 = y1+NH+VG/2;
     svg += vline(W/2, y1+NH, midY12, LC);
-    if (teamNodes.length > 1) svg += hline(teamNodes[0].cx, teamNodes[teamNodes.length-1].cx, midY12, LC);
+    if (teamNodes.length>1) svg += hline(teamNodes[0].cx, teamNodes[teamNodes.length-1].cx, midY12, LC);
     teamNodes.forEach(function(n){ svg += vline(n.cx, midY12, n.cy-NH/2, LC); });
   }
 
-  // 팀장 → 그룹 (공사팀장에서 내려가는 선)
-  var srcCX = teams.length > 0 ? teamNodes[Math.min(S.c.gt, teamNodes.length-1)].cx : W/2;
-  var srcBottomY = teams.length > 0 ? y2+NH : y1+NH;
-  var midY23 = srcBottomY + VG/2;
-  if (groups.length > 0) {
+  // 팀장 → 그룹 (공사팀장 위치에서 내려감)
+  if (groups.length>0 && groupRows.length>0) {
+    var srcIdx = Math.min(S.c.gt, teamNodes.length-1);
+    var srcCX = teamNodes.length>0 ? teamNodes[srcIdx].cx : W/2;
+    var srcBottomY = teamNodes.length>0 ? y2+NH : y1+NH;
+    var midY23 = srcBottomY+VG/2;
     svg += vline(srcCX, srcBottomY, midY23, LC);
-    var gMidL = groups[0].x + groups[0].gw/2;
-    var gMidR = groups[groups.length-1].x + groups[groups.length-1].gw/2;
-    if (groups.length > 1) svg += hline(gMidL, gMidR, midY23, LC);
-    groups.forEach(function(g){ svg += vline(g.x+g.gw/2, midY23, y3, LC); });
+    // 첫 행 그룹들과 수평 연결
+    var row0 = groupRows[0];
+    if (row0.length>0) {
+      var gL = row0[0].x+row0[0].gw/2;
+      var gR = row0[row0.length-1].x+row0[row0.length-1].gw/2;
+      // srcCX → 첫 행 중앙까지 수평
+      var row0CX = (gL+gR)/2;
+      if (Math.abs(srcCX - row0CX) > 5) {
+        svg += hline(srcCX, row0CX, midY23, LC);
+        svg += vline(row0CX, midY23, y3, LC);
+      }
+      if (row0.length>1) svg += hline(gL, gR, y3, LC);
+      row0.forEach(function(g){ svg += vline(g.x+g.gw/2, y3, y3+4, LC); });
+    }
+    // 2행이면 추가 연결
+    if (groupRows.length>1) {
+      var row1 = groupRows[1];
+      var y3b = y3+maxRowH+VG;
+      var row1L = row1[0].x+row1[0].gw/2;
+      var row1R = row1[row1.length-1].x+row1[row1.length-1].gw/2;
+      svg += vline(W/2, y3+maxRowH, y3b, LC);
+      if (row1.length>1) svg += hline(row1L, row1R, y3b, LC);
+      row1.forEach(function(g){ svg += vline(g.x+g.gw/2, y3b, y3b+4, LC); });
+    }
   }
 
   // === 노드 ===
-  // 소장
   svg += topNode(cx0, cy0, NW+20, NH, '비상상황대장 · 현장소장', site.name||'(미입력)', site.tel||'', 'e_site', BR, BRD, FK, MK);
-  // 안전관리자
-  smNodes.forEach(function(n,i) {
+  smNodes.forEach(function(n) {
     svg += midNode(n.cx, n.cy, NW, NH, '비상상황부대장 · 안전관리자', n.p.name||'(미입력)', n.p.tel||'', n.k, BRL, BRM, BRD, FK, MK);
   });
-  // 팀장
   teamNodes.forEach(function(n) {
     svg += midNode(n.cx, n.cy, NW, NH, n.lbl, n.p.name||'(미입력)', n.p.tel||'', n.k, BRL, BRM, BRD, FK, MK);
   });
-  // 그룹
-  groups.forEach(function(g) {
-    var gx=g.x, gy=y3;
-    svg += '<rect x="'+gx+'" y="'+gy+'" width="'+g.gw+'" height="'+g.gh+'" rx="10" fill="#F8FAFB" stroke="#E2E6EA" stroke-width="1"/>';
-    svg += '<text x="'+(gx+g.gw/2)+'" y="'+(gy+18)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#9AA3AE" font-family="'+FK+'">'+esc(g.name)+'</text>';
-    g.members.forEach(function(m,idx) {
-      var col=idx%g.cols, row2=Math.floor(idx/g.cols);
-      var nx=gx+12+col*(SNW+GAP), ny=gy+28+row2*(SNH+8);
-      svg += snNode(nx, ny, SNW, SNH, m.lbl, m.p.name||'(미입력)', m.k, FK);
+
+  // 그룹 박스
+  groupRows.forEach(function(row, rowIdx) {
+    var rowY = y3 + rowIdx*(maxRowH+VG);
+    row.forEach(function(g) {
+      var gx=g.x, gy=rowY;
+      svg += '<rect x="'+gx+'" y="'+gy+'" width="'+g.gw+'" height="'+g.gh+'" rx="10" fill="#F8FAFB" stroke="#E2E6EA" stroke-width="1"/>';
+      svg += '<text x="'+(gx+g.gw/2)+'" y="'+(gy+18)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#9AA3AE" font-family="'+FK+'">'+esc(g.name)+'</text>';
+      g.members.forEach(function(m, idx) {
+        var col=idx%g.cols, row2=Math.floor(idx/g.cols);
+        var nx=gx+12+col*(SNW+GAP), ny=gy+28+row2*(SNH+8);
+        svg += snNode(nx, ny, SNW, SNH, m.lbl, m.p.name||'', m.k, FK);
+      });
     });
   });
 
@@ -431,8 +475,8 @@ function renderOrg() {
   document.getElementById('org-wrap').innerHTML = svg;
 }
 
-// ===== SVG ORG — 안전보건관리기구 =====
 function renderSafetyOrg() {
+  buildKeys();
   var NW=148, NH=60, SNW=106, SNH=44, GAP=12, VG=36, PAD=28;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
   var FK='Noto Sans KR,sans-serif', MK='JetBrains Mono,monospace';
@@ -551,12 +595,15 @@ function midNode(cx, cy, w, h, role, name, tel, k, fill, stroke, textC, fk, mk) 
 }
 
 function snNode(x, y, w, h, lbl, name, k, fk) {
-  var cl = k ? ' style="cursor:pointer" onclick="goDoc(\''+k+'\')"' : '';
+  var isEmpty = !name || name === '(미입력)' || !name.trim();
+  var cl = (!isEmpty && k) ? ' style="cursor:pointer" onclick="goDoc(\''+k+'\')"' : '';
+  var rectStroke = isEmpty ? '#D1D5DB' : '#E2E6EA';
+  var rectFill   = isEmpty ? '#F9FAFB' : '#fff';
+  var rectDash   = isEmpty ? ' stroke-dasharray="4 2"' : '';
+  var nameColor  = isEmpty ? '#CBD5E1' : '#1A2130';
+  var nameText   = isEmpty ? '미배정' : name;
   return '<g'+cl+'>'
-    +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6" fill="#fff" stroke="#E2E6EA" stroke-width="1"/>'
-    +'<text x="'+(x+w/2)+'" y="'+(y+12)+'" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="600" fill="#9AA3AE" font-family="'+fk+'">'+esc(lbl)+'</text>'
-    +'<text x="'+(x+w/2)+'" y="'+(y+h/2+6)+'" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700" fill="#1A2130" font-family="'+fk+'">'+esc(name)+'</text>'
-    +'</g>';
+    +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6" fill="'+rectFill+'" stroke="'+rectStroke+'" stroke-width="1"'+rectDash+'/>'    +'<text x="'+(x+w/2)+'" y="'+(y+12)+'" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="600" fill="'+( isEmpty?'#CBD5E1':'#9AA3AE')+'" font-family="'+fk+'">'+esc(lbl)+'</text>'    +'<text x="'+(x+w/2)+'" y="'+(y+h/2+6)+'" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="'+(isEmpty?'400':'700')+'" fill="'+nameColor+'" font-family="'+fk+'">'+esc(nameText)+'</text>'    +'</g>';
 }
 
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -600,7 +647,11 @@ function renderDoc() {
   if (!k) { document.getElementById('doc-area').innerHTML=''; return; }
   var p = S.p[k], tmpl = getTmpl(k);
   if (!p||!tmpl) return;
-  document.getElementById('doc-area').innerHTML =
+  if (!S.manual) S.manual = {};
+  if (!S.manual[k]) S.manual[k] = {};
+  var md = S.manual[k];
+
+  var html2 =
     '<div class="doc-paper"><div class="doc-inner">'
     +'<div class="doc-ttl">'+tmpl.t+'</div>'
     +'<div class="doc-fields">'
@@ -608,15 +659,55 @@ function renderDoc() {
     +'<div class="doc-row"><span class="doc-lbl">직&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;책 :</span><span class="doc-val">'+escHtml(p.position)+'</span></div>'
     +'<div class="doc-row"><span class="doc-lbl">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 :</span><span class="doc-val">'+(p.name||'<span style="color:var(--g400)">(미입력)</span>')+'</span></div>'
     +(p.tel?'<div class="doc-row"><span class="doc-lbl">연&nbsp;&nbsp;락&nbsp;&nbsp;처 :</span><span class="doc-val">'+escHtml(p.tel)+'</span></div>':'')
-    +'<div class="doc-row"><span class="doc-lbl">부재시 업무 인계자 :</span><span class="doc-val" style="color:var(--g400)">(수동 입력)</span></div>'
+    +'<div class="doc-row"><span class="doc-lbl">부재시 업무 인계자 :</span>'
+    +'<input id="mi-deputy" class="doc-manual-input" value="'+escAttr(md.deputy||'')+'" placeholder="성명 직접 입력">'
+    +'</div>'
     +(p.emergency?'<div class="doc-row"><span class="doc-lbl">비상시 역할조직 :</span><span class="doc-val">'+escHtml(p.emergency)+'</span></div>':'')
     +'</div>'
     +'<div class="doc-sh">'+tmpl.s1+'</div>'+tmpl.d1.map(function(d,i){ return '<div class="doc-duty">'+(i+1)+'. '+escHtml(d)+'</div>'; }).join('')
     +'<div class="doc-sh" style="margin-top:16px">'+tmpl.s2+'</div>'+tmpl.d2.map(function(d,i){ return '<div class="doc-duty">'+(i+1)+'. '+escHtml(d)+'</div>'; }).join('')
-    +'<div class="doc-sign"><div class="doc-sign-d">위와 같이 본인의 안전보건에 관한 직무를 성실히 이행할 것을 확인합니다.<br><br>20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;일</div>'
-    +'<div class="doc-sign-n">'+(p.name||'____________')+'&nbsp;&nbsp;&nbsp;(서명)</div></div>'
-    +'</div></div>';
+    +'<div class="doc-sign">'
+    +'<div class="doc-sign-d">위와 같이 본인의 안전보건에 관한 직무를 성실히 이행할 것을 확인합니다.<br><br>'
+    +'20<input id="mi-year" class="doc-date-input" value="'+escAttr(md.year||'')+'" placeholder="  " maxlength="4" style="width:46px">년'
+    +'&nbsp;<input id="mi-month" class="doc-date-input" value="'+escAttr(md.month||'')+'" placeholder=" " maxlength="2" style="width:30px">월'
+    +'&nbsp;<input id="mi-day" class="doc-date-input" value="'+escAttr(md.day||'')+'" placeholder=" " maxlength="2" style="width:30px">일'
+    +'</div>'
+    +'<div class="doc-sign-n">'+(p.name||'____________')+'&nbsp;&nbsp;&nbsp;(서명)</div>'
+    +'</div></div></div>';
+
+  document.getElementById('doc-area').innerHTML = html2;
+  document.getElementById('doc-area').setAttribute('data-key', k);
+
+  // 이벤트 바인딩
+  var area = document.getElementById('doc-area');
+  ['mi-deputy','mi-year','mi-month','mi-day'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', function() { syncManual(); });
+  });
 }
+
+function syncManual() {
+  var k = document.getElementById('doc-area').getAttribute('data-key');
+  if (!k) return;
+  if (!S.manual) S.manual = {};
+  if (!S.manual[k]) S.manual[k] = {};
+  var d = document.getElementById('mi-deputy');
+  var y = document.getElementById('mi-year');
+  var m = document.getElementById('mi-month');
+  var day = document.getElementById('mi-day');
+  if (d) S.manual[k].deputy = d.value;
+  if (y) S.manual[k].year = y.value;
+  if (m) S.manual[k].month = m.value;
+  if (day) S.manual[k].day = day.value;
+}
+
+
+function saveManual(key, field, val) {
+  if (!S.manual) S.manual = {};
+  if (!S.manual[key]) S.manual[key] = {};
+  S.manual[key][field] = val;
+}
+
 
 // ===== 내비게이션 =====
 function goPage(id, el) {
@@ -801,7 +892,7 @@ function downloadAllDocx() {
 
 // ===== SAVE / EXPORT =====
 function saveAll() {
-  try { localStorage.setItem('shinwon_v3', JSON.stringify({ c:S.c, units:S.units, p:S.p })); } catch(e){}
+  try { localStorage.setItem('shinwon_v3', JSON.stringify({ c:S.c, units:S.units, p:S.p, manual:S.manual||{} })); } catch(e){}
   updStat();
   var btn = event && event.currentTarget;
   if (btn) { var orig=btn.textContent; btn.textContent='✓ 저장됨'; setTimeout(function(){ btn.textContent=orig; },1500); }
@@ -809,14 +900,14 @@ function saveAll() {
 
 function exportJSON() {
   saveAll();
-  var blob = new Blob([JSON.stringify({ c:S.c, units:S.units, p:S.p },null,2)],{ type:'application/json' });
+  var blob = new Blob([JSON.stringify({ c:S.c, units:S.units, p:S.p, manual:S.manual||{} },null,2)],{ type:'application/json' });
   var a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='신원_안전보건_'+new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','')+'.json'; a.click();
 }
 
 function importJSON(evt) {
   var f=evt.target.files[0]; if(!f) return;
   var r=new FileReader();
-  r.onload=function(e){ try { var d=JSON.parse(e.target.result); if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; Object.keys(S.c).forEach(function(k){ var el=document.getElementById('c-'+k); if(el) el.textContent=S.c[k]; }); renderUnits(); if(Object.keys(S.p).length>0) applySetup(); alert('불러오기 완료'); } catch(e){ alert('파일 오류: '+e.message); } };
+  r.onload=function(e){ try { var d=JSON.parse(e.target.result); if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; if(d.manual) S.manual=d.manual; Object.keys(S.c).forEach(function(k){ var el=document.getElementById('c-'+k); if(el) el.textContent=S.c[k]; }); renderUnits(); if(Object.keys(S.p).length>0) applySetup(); alert('불러오기 완료'); } catch(e){ alert('파일 오류: '+e.message); } };
   r.readAsText(f);
 }
 
@@ -838,7 +929,7 @@ function loadSample() {
     var saved=localStorage.getItem('shinwon_v3');
     if (saved) {
       var d=JSON.parse(saved);
-      if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p;
+      if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; if(d.manual) S.manual=d.manual;
       Object.keys(S.c).forEach(function(k){ var el=document.getElementById('c-'+k); if(el) el.textContent=S.c[k]; });
       renderUnits();
       if(Object.keys(S.p).length>0){ renderInput(); renderOrg(); renderSafetyOrg(); buildDocSel(); updStat(); }
