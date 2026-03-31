@@ -103,6 +103,18 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--g90
 <div id="page-setup" class="page active">
   <div class="ph"><div class="pt">인원 구성 설정</div><div class="ps">직책 유형별 인원 수를 설정하세요. 설정하면 입력 폼과 조직도가 자동 생성됩니다.</div></div>
   <div class="card">
+    <div class="ch"><span class="ct">현장 기본 정보</span></div>
+    <div class="cb">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <label style="font-size:12px;font-weight:600;color:var(--g500);white-space:nowrap">현장명</label>
+        <input id="site-name-input" type="text" value="" placeholder="예: 신원 ○○ 신축공사 현장"
+          style="flex:1;min-width:200px;max-width:400px;border:var(--border);border-radius:var(--r);padding:7px 12px;font-size:14px;font-family:'Noto Sans KR',sans-serif;color:var(--g900)"
+          oninput="S.siteName=this.value">
+        <span style="font-size:11px;color:var(--g400)">직무확인서 및 조직도 제목에 표시됩니다</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
     <div class="ch"><span class="ct">핵심 직책 설정</span></div>
     <div class="cb">
       <div class="setup-grid">
@@ -138,13 +150,29 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--g90
 
 <!-- 비상기구 조직도 -->
 <div id="page-org" class="page">
-  <div class="ph"><div class="pt">현장 비상기구 조직도</div><div class="ps">인력 입력 데이터 기반 자동 생성 · 노드 클릭 시 직무확인서로 이동</div></div>
+  <div class="ph">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div><div class="pt" id="org-title">현장 비상기구 조직도</div><div class="ps">인력 입력 데이터 기반 자동 생성 · 노드 클릭 시 직무확인서로 이동</div></div>
+      <div class="btn-row">
+        <button class="btn btn-p" onclick="downloadOrgDocx('org')">⬇️ Word 저장</button>
+        <button class="btn" onclick="printOrg('org')">🖨️ 인쇄 / PDF</button>
+      </div>
+    </div>
+  </div>
   <div class="card"><div class="cb"><div class="org-wrap" id="org-wrap"><p style="text-align:center;padding:40px;color:var(--g400);font-size:13px">설정 적용 후 자동 생성됩니다</p></div></div></div>
 </div>
 
 <!-- 안전보건관리기구 -->
 <div id="page-safetyorg" class="page">
-  <div class="ph"><div class="pt">안전보건관리기구 조직도</div><div class="ps">산업안전보건법 기준 관리체계</div></div>
+  <div class="ph">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div><div class="pt" id="safety-title">안전보건관리기구 조직도</div><div class="ps">산업안전보건법 기준 관리체계</div></div>
+      <div class="btn-row">
+        <button class="btn btn-p" onclick="downloadOrgDocx('safety')">⬇️ Word 저장</button>
+        <button class="btn" onclick="printOrg('safety')">🖨️ 인쇄 / PDF</button>
+      </div>
+    </div>
+  </div>
   <div class="card"><div class="cb"><div class="org-wrap" id="safety-wrap"><p style="text-align:center;padding:40px;color:var(--g400);font-size:13px">설정 적용 후 자동 생성됩니다</p></div></div></div>
 </div>
 
@@ -185,6 +213,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--g90
 <script>
 // ===== STATE =====
 var S = {
+  siteName: '',
   c: { sm:1, hm:0, gt:1, ct:1, at:1, qm:1 },
   units: [{ id:'u1',name:'구조반',count:5 },{ id:'u2',name:'반출반',count:4 },{ id:'u3',name:'복구반',count:5 }],
   p: {}
@@ -240,6 +269,7 @@ function unitCnt(id, d) {
 }
 
 function applySetup() {
+  var sni=document.getElementById('site-name-input'); if(sni) S.siteName=sni.value;
   buildKeys();
   renderInput();
   renderOrg();
@@ -320,7 +350,8 @@ function updStat() {
 
 // ===== SVG ORG — 비상기구 =====
 function renderOrg() {
-  var NW=148, NH=60, SNW=90, SNH=42, GAP=10, VG=36, PAD=32;
+  var t=document.getElementById('org-title'); if(t) t.textContent=(S.siteName?S.siteName+' ':'')+'현장 비상기구 조직도';
+  var NW=156, NH=76, SNW=92, SNH=46, GAP=10, VG=36, PAD=32;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
   var FK='Noto Sans KR,sans-serif', MK='JetBrains Mono,monospace';
 
@@ -477,7 +508,8 @@ function renderOrg() {
 
 function renderSafetyOrg() {
   buildKeys();
-  var NW=148, NH=60, SNW=106, SNH=44, GAP=12, VG=36, PAD=28;
+  var t=document.getElementById('safety-title'); if(t) t.textContent=(S.siteName?S.siteName+' ':'')+'안전보건관리기구 조직도';
+  var NW=156, NH=76, SNW=106, SNH=46, GAP=12, VG=36, PAD=28;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
   var FK='Noto Sans KR,sans-serif', MK='JetBrains Mono,monospace';
 
@@ -575,22 +607,29 @@ function hline(x1, x2, y, c) { return '<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" 
 function topNode(cx, cy, w, h, role, name, tel, k, fill, stroke, fk, mk) {
   var x=cx-w/2, y=cy-h/2;
   var cl = k ? ' style="cursor:pointer" onclick="goDoc(\''+k+'\')"' : '';
+  // 텍스트 위치: 직책(상단), 이름(중앙), 전화(하단) — 균등 배분
+  var yRole = y + 14;
+  var yName = tel ? y + h*0.45 : y + h*0.5;
+  var yTel  = y + h - 12;
   return '<g'+cl+'>'
     +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="8" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1"/>'
-    +'<text x="'+cx+'" y="'+(y+14)+'" text-anchor="middle" dominant-baseline="hanging" font-size="10" font-weight="500" fill="rgba(255,255,255,0.75)" font-family="'+fk+'">'+esc(role)+'</text>'
-    +'<text x="'+cx+'" y="'+(cy-1)+'" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#fff" font-family="'+fk+'">'+esc(name)+'</text>'
-    +(tel?'<text x="'+cx+'" y="'+(y+h-10)+'" text-anchor="middle" dominant-baseline="central" font-size="10" fill="rgba(255,255,255,0.65)" font-family="'+mk+'">'+esc(tel)+'</text>':'')
+    +'<text x="'+cx+'" y="'+yRole+'" text-anchor="middle" dominant-baseline="hanging" font-size="10" font-weight="500" fill="rgba(255,255,255,0.78)" font-family="'+fk+'">'+esc(role)+'</text>'
+    +'<text x="'+cx+'" y="'+yName+'" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#fff" font-family="'+fk+'">'+esc(name)+'</text>'
+    +(tel?'<text x="'+cx+'" y="'+yTel+'" text-anchor="middle" dominant-baseline="central" font-size="10" fill="rgba(255,255,255,0.68)" font-family="'+mk+'">'+esc(tel)+'</text>':'')
     +'</g>';
 }
 
 function midNode(cx, cy, w, h, role, name, tel, k, fill, stroke, textC, fk, mk) {
   var x=cx-w/2, y=cy-h/2;
   var cl = k ? ' style="cursor:pointer" onclick="goDoc(\''+k+'\')"' : '';
+  var yRole = y + 14;
+  var yName = tel ? y + h*0.46 : y + h*0.52;
+  var yTel  = y + h - 12;
   return '<g'+cl+'>'
     +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="8" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1"/>'
-    +'<text x="'+cx+'" y="'+(y+14)+'" text-anchor="middle" dominant-baseline="hanging" font-size="10" font-weight="500" fill="'+textC+'" font-family="'+fk+'">'+esc(role)+'</text>'
-    +'<text x="'+cx+'" y="'+(cy-1)+'" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" fill="#1A2130" font-family="'+fk+'">'+esc(name)+'</text>'
-    +(tel?'<text x="'+cx+'" y="'+(y+h-10)+'" text-anchor="middle" dominant-baseline="central" font-size="10" fill="#6B7785" font-family="'+mk+'">'+esc(tel)+'</text>':'')
+    +'<text x="'+cx+'" y="'+yRole+'" text-anchor="middle" dominant-baseline="hanging" font-size="10" font-weight="500" fill="'+textC+'" font-family="'+fk+'">'+esc(role)+'</text>'
+    +'<text x="'+cx+'" y="'+yName+'" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" fill="#1A2130" font-family="'+fk+'">'+esc(name)+'</text>'
+    +(tel?'<text x="'+cx+'" y="'+yTel+'" text-anchor="middle" dominant-baseline="central" font-size="10" fill="#6B7785" font-family="'+mk+'">'+esc(tel)+'</text>':'')
     +'</g>';
 }
 
@@ -656,6 +695,7 @@ function renderDoc() {
     +'<div class="doc-ttl">'+tmpl.t+'</div>'
     +'<div class="doc-fields">'
     +'<div class="doc-row"><span class="doc-lbl">소속 회사 :</span><span class="doc-val">신원종합개발㈜</span></div>'
+    +(S.siteName?'<div class="doc-row"><span class="doc-lbl">현&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;장 :</span><span class="doc-val">'+escHtml(S.siteName)+'</span></div>':'')
     +'<div class="doc-row"><span class="doc-lbl">직&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;책 :</span><span class="doc-val">'+escHtml(p.position)+'</span></div>'
     +'<div class="doc-row"><span class="doc-lbl">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 :</span><span class="doc-val">'+(p.name||'<span style="color:var(--g400)">(미입력)</span>')+'</span></div>'
     +(p.tel?'<div class="doc-row"><span class="doc-lbl">연&nbsp;&nbsp;락&nbsp;&nbsp;처 :</span><span class="doc-val">'+escHtml(p.tel)+'</span></div>':'')
@@ -890,9 +930,183 @@ function downloadAllDocx() {
   next();
 }
 
+
+// ═══════════════════════════════════════════
+// 조직도 인쇄 / Word 저장
+// ═══════════════════════════════════════════
+
+// SVG 크기 → A4/A3 가로/세로 자동 판단
+function getPageInfo(svgW, svgH) {
+  // 인쇄 가능 영역(mm) A4세로:190x277, A4가로:277x190, A3가로:400x277
+  var ratio = svgW / svgH;
+  var useA3 = svgW > 1100 || svgH > 800;
+  if (ratio >= 1.2) {
+    // 가로형 조직도
+    return useA3
+      ? { css:'A3 landscape', wMM:420, hMM:297, wEMU:23814, hEMU:13608, landscape:true }
+      : { css:'A4 landscape', wMM:297, hMM:210, wEMU:16839, hEMU:11906, landscape:true };
+  } else {
+    // 세로형 조직도
+    return useA3
+      ? { css:'A3 portrait', wMM:297, hMM:420, wEMU:16839, hEMU:23814, landscape:false }
+      : { css:'A4 portrait', wMM:210, hMM:297, wEMU:11906, hEMU:16839, landscape:false };
+  }
+}
+
+// 인쇄/PDF — 새 창, @page 설정, 한 페이지 fit
+function printOrg(type) {
+  var wrapId = type === 'org' ? 'org-wrap' : 'safety-wrap';
+  var svgEl = document.querySelector('#'+wrapId+' svg');
+  if (!svgEl) { alert('조직도를 먼저 생성해주세요 (설정 적용 후)'); return; }
+
+  var sitePart = S.siteName ? S.siteName+' ' : '';
+  var docTitle = sitePart + (type === 'org' ? '현장 비상기구 조직도' : '안전보건관리기구 조직도');
+  var svgW = parseFloat(svgEl.getAttribute('width')) || 900;
+  var svgH = parseFloat(svgEl.getAttribute('height')) || 600;
+  var pi = getPageInfo(svgW, svgH);
+
+  // SVG에 폰트 embed (외부 구글폰트가 인쇄창에서 로드 안 될 수 있으므로 fallback 처리)
+  var svgClone = svgEl.cloneNode(true);
+  svgClone.setAttribute('width', '100%');
+  svgClone.setAttribute('height', 'auto');
+  svgClone.style.cssText = 'width:100%;height:auto;display:block';
+  var svgStr = new XMLSerializer().serializeToString(svgClone);
+
+  var printHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<title>' + docTitle + '</title>'
+    + '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    + '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">'
+    + '<style>'
+    + '* { box-sizing:border-box; margin:0; padding:0; }'
+    + '@page { size:' + pi.css + '; margin:12mm; }'
+    + 'html, body { width:100%; height:100%; font-family:"Noto Sans KR","Malgun Gothic",sans-serif; }'
+    + '.wrap { display:flex; flex-direction:column; align-items:center; width:100%; }'
+    + '.title { font-size:15px; font-weight:700; text-align:center; padding-bottom:8px; border-bottom:2px solid #333; margin-bottom:10px; width:100%; letter-spacing:-0.3px; }'
+    + '.svg-box { width:100%; flex:1; display:flex; align-items:center; justify-content:center; }'
+    + '.svg-box svg { width:100% !important; height:auto !important; max-height:' + (pi.hMM - 30) + 'mm; }'
+    + '@media print { .wrap { height:calc(100vh - 24mm); } }'
+    + '</style></head><body>'
+    + '<div class="wrap">'
+    + '<div class="title">' + docTitle + '</div>'
+    + '<div class="svg-box">' + svgStr + '</div>'
+    + '</div>'
+    + '<script>window.onload=function(){ setTimeout(function(){ window.print(); }, 900); };<\/script>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank', 'width=1200,height=860');
+  if (!win) { alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.'); return; }
+  win.document.open();
+  win.document.write(printHtml);
+  win.document.close();
+}
+
+// Word 저장 — SVG를 고해상도 PNG로 변환 후 docx 삽입
+function downloadOrgDocx(type) {
+  var wrapId = type === 'org' ? 'org-wrap' : 'safety-wrap';
+  var svgEl = document.querySelector('#'+wrapId+' svg');
+  if (!svgEl) { alert('조직도를 먼저 생성해주세요 (설정 적용 후)'); return; }
+
+  var sitePart = S.siteName ? S.siteName+' ' : '';
+  var docTitle = sitePart + (type === 'org' ? '현장 비상기구 조직도' : '안전보건관리기구 조직도');
+  var fname = (docTitle + '.docx').replace(/\s+/g, '_');
+
+  var svgW = parseFloat(svgEl.getAttribute('width')) || 900;
+  var svgH = parseFloat(svgEl.getAttribute('height')) || 600;
+  var pi = getPageInfo(svgW, svgH);
+
+  // ── SVG를 inline base64 data URI로 변환 (CORS 우회)
+  var svgClone = svgEl.cloneNode(true);
+  // 외부 폰트 link 제거 (Word에서 불필요)
+  svgClone.querySelectorAll('link').forEach(function(l){ l.remove(); });
+  // 한국어 폰트 스타일 직접 지정
+  svgClone.style.fontFamily = '"Malgun Gothic","Noto Sans KR",sans-serif';
+  var svgStr = '<?xml version="1.0" encoding="UTF-8"?>'
+    + new XMLSerializer().serializeToString(svgClone);
+
+  // SVG → PNG via Canvas (data URI 방식 — 외부 리소스 없어 CORS 없음)
+  var SCALE = 3; // 고해상도
+  var canvas = document.createElement('canvas');
+  canvas.width  = Math.ceil(svgW * SCALE);
+  canvas.height = Math.ceil(svgH * SCALE);
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  var svgDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+  var img = new Image();
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    var dataUrl = canvas.toDataURL('image/png');
+    var base64  = dataUrl.replace(/^data:image\/png;base64,/, '');
+
+    // base64 → Uint8Array
+    var binStr = atob(base64);
+    var bytes = new Uint8Array(binStr.length);
+    for (var i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+
+    // EMU 계산 (1px@96dpi = 9525 EMU)
+    var marginEMU = 720;
+    var availW = pi.wEMU - marginEMU * 2;
+    var availH = pi.hEMU - marginEMU * 2 - 1000; // 제목 공간
+    var aspect  = svgH / svgW;
+    var imgW = availW;
+    var imgH = Math.round(imgW * aspect);
+    if (imgH > availH) { imgH = availH; imgW = Math.round(imgH / aspect); }
+    // EMU → px (Word ImageRun은 px 단위)
+    var imgWpx = Math.round(imgW / 9525);
+    var imgHpx = Math.round(imgH / 9525);
+
+    var d = docx;
+    var doc2 = new d.Document({
+      sections: [{
+        properties: {
+          page: {
+            size: {
+              width: pi.wEMU, height: pi.hEMU,
+              orientation: pi.landscape ? d.PageOrientation.LANDSCAPE : d.PageOrientation.PORTRAIT
+            },
+            margin: { top: marginEMU, right: marginEMU, bottom: marginEMU, left: marginEMU }
+          }
+        },
+        children: [
+          new d.Paragraph({
+            alignment: d.AlignmentType.CENTER,
+            spacing: { before: 0, after: 280 },
+            border: { bottom: { style: d.BorderStyle.SINGLE, size: 10, color: '1A2130', space: 2 } },
+            children: [new d.TextRun({ text: docTitle, font: 'Malgun Gothic', size: 30, bold: true })]
+          }),
+          new d.Paragraph({
+            alignment: d.AlignmentType.CENTER,
+            spacing: { before: 200, after: 0 },
+            children: [
+              new d.ImageRun({
+                data: bytes,
+                transformation: { width: imgWpx, height: imgHpx },
+                type: 'png'
+              })
+            ]
+          })
+        ]
+      }]
+    });
+
+    d.Packer.toBlob(doc2).then(function(blob){
+      triggerDownload(blob, fname);
+    }).catch(function(e){
+      alert('Word 생성 오류: ' + e.message + '\n인쇄/PDF를 이용해주세요.');
+    });
+  };
+  img.onerror = function() {
+    // Canvas 방식 실패 시 — SVG를 직접 Word XML에 삽입하는 대안
+    alert('이미지 변환 실패.\n인쇄/PDF 버튼으로 PDF 저장 후 Word에 붙여넣기 해주세요.');
+  };
+  img.src = svgDataUri;
+}
+
 // ===== SAVE / EXPORT =====
 function saveAll() {
-  try { localStorage.setItem('shinwon_v3', JSON.stringify({ c:S.c, units:S.units, p:S.p, manual:S.manual||{} })); } catch(e){}
+  try { localStorage.setItem('shinwon_v3', JSON.stringify({ siteName:S.siteName||'', c:S.c, units:S.units, p:S.p, manual:S.manual||{} })); } catch(e){}
   updStat();
   var btn = event && event.currentTarget;
   if (btn) { var orig=btn.textContent; btn.textContent='✓ 저장됨'; setTimeout(function(){ btn.textContent=orig; },1500); }
@@ -907,7 +1121,7 @@ function exportJSON() {
 function importJSON(evt) {
   var f=evt.target.files[0]; if(!f) return;
   var r=new FileReader();
-  r.onload=function(e){ try { var d=JSON.parse(e.target.result); if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; if(d.manual) S.manual=d.manual; Object.keys(S.c).forEach(function(k){ var el=document.getElementById('c-'+k); if(el) el.textContent=S.c[k]; }); renderUnits(); if(Object.keys(S.p).length>0) applySetup(); alert('불러오기 완료'); } catch(e){ alert('파일 오류: '+e.message); } };
+  r.onload=function(e){ try { var d=JSON.parse(e.target.result); if(d.siteName!==undefined) S.siteName=d.siteName; if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; if(d.manual) S.manual=d.manual; Object.keys(S.c).forEach(function(k){ var el=document.getElementById('c-'+k); if(el) el.textContent=S.c[k]; }); renderUnits(); if(Object.keys(S.p).length>0) applySetup(); alert('불러오기 완료'); } catch(e){ alert('파일 오류: '+e.message); } };
   r.readAsText(f);
 }
 
@@ -929,9 +1143,11 @@ function loadSample() {
     var saved=localStorage.getItem('shinwon_v3');
     if (saved) {
       var d=JSON.parse(saved);
-      if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; if(d.manual) S.manual=d.manual;
+      if(d.siteName!==undefined) S.siteName=d.siteName; if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; if(d.manual) S.manual=d.manual;
       Object.keys(S.c).forEach(function(k){ var el=document.getElementById('c-'+k); if(el) el.textContent=S.c[k]; });
       renderUnits();
+      var sni = document.getElementById('site-name-input');
+      if (sni && S.siteName) sni.value = S.siteName;
       if(Object.keys(S.p).length>0){ renderInput(); renderOrg(); renderSafetyOrg(); buildDocSel(); updStat(); }
     }
   } catch(e){}
