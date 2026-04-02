@@ -277,6 +277,12 @@ function init() {
   }
   if (baseUrl) document.getElementById('base-url').value = baseUrl;
   if (sheetsUrl) document.getElementById('sheets-url').value = sheetsUrl;
+    else {
+      // 기본 Apps Script URL 자동 설정
+      var defaultUrl = 'https://script.google.com/macros/s/AKfycbxiGMLnwO3QHQKIw8jHjfG40eUGoOlq_KXOng6sE-Jm9Sbpzsz-xZ9ZeHVCMdtSh9jb/exec';
+      document.getElementById('sheets-url').value = defaultUrl;
+      sheetsUrl = defaultUrl;
+    }
   renderSites();
 }
 
