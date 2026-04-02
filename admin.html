@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>신원종합개발 | 안전보건 현장 관리</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+:root{--br:#00B0CA;--brd:#008FA5;--brl:#E0F7FA;--g50:#F8FAFB;--g100:#F1F3F4;--g200:#E2E6EA;--g400:#9AA3AE;--g500:#6B7785;--g700:#3D4653;--g900:#1A2130;--w:#fff;--border:1px solid var(--g200);--r:8px;--rl:12px;--sh:0 1px 4px rgba(0,0,0,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--g900);min-height:100vh}
+.hdr{background:var(--w);border-bottom:var(--border);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh);position:sticky;top:0;z-index:100}
+.logo{width:32px;height:32px;background:var(--br);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+.hdr-title{font-size:14px;font-weight:700}.hdr-sub{font-size:11px;color:var(--g500)}
+.hdr-sp{flex:1}
+.wrap{max-width:1100px;margin:0 auto;padding:24px}
+.page-title{font-size:20px;font-weight:700;margin-bottom:4px}.page-sub{font-size:13px;color:var(--g500);margin-bottom:24px}
+.card{background:var(--w);border:var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:20px;box-shadow:var(--sh)}
+.ch{padding:12px 16px;border-bottom:var(--border);background:var(--g50);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ct{font-size:13px;font-weight:600;color:var(--g700)}.ctag{font-size:10px;color:var(--g500);background:var(--g200);padding:2px 8px;border-radius:99px}
+.cb{padding:16px}
+.base-url-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.base-url-inp{flex:1;min-width:200px;border:var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--g900)}
+.base-url-inp:focus{outline:none;border-color:var(--br);box-shadow:0 0 0 2px rgba(0,176,202,.12)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border:var(--border);border-radius:var(--r);font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;background:var(--w);color:var(--g700);transition:all .12s}
+.btn:hover{background:var(--g100)}.btn-p{background:var(--br);color:#fff;border-color:var(--br)}.btn-p:hover{background:var(--brd)}.btn-sm{padding:4px 10px;font-size:12px}.btn-danger{background:#fee2e2;color:#dc2626;border-color:#fca5a5}.btn-danger:hover{background:#fecaca}
+.sites-table{width:100%;border-collapse:collapse;font-size:13px}
+.sites-table th{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--g500);border-bottom:var(--border);background:var(--g50)}
+.sites-table td{padding:8px 12px;border-bottom:1px solid var(--g100);vertical-align:middle}
+.sites-table tr:last-child td{border-bottom:none}.sites-table tr:hover td{background:var(--g50)}
+.url-cell{font-family:'Courier New',monospace;font-size:11px;color:var(--br);word-break:break-all}
+.inp-sm{border:var(--border);border-radius:6px;padding:5px 8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--g900);background:var(--w);width:100%}
+.inp-sm:focus{outline:none;border-color:var(--br)}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.dot-ok{background:#22c55e}.dot-empty{background:#e5e7eb}.dot-warn{background:#f59e0b}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.add-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;background:var(--g50);border:1px dashed var(--g300);border-radius:var(--r);margin-top:12px}
+.add-row input{border:var(--border);border-radius:6px;padding:6px 10px;font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--g900);background:var(--w)}
+.add-row input:focus{outline:none;border-color:var(--br)}
+.sheets-section{background:var(--brl);border:1px solid var(--g200);border-radius:var(--r);padding:14px 16px;margin-top:16px}
+.sheets-title{font-size:12px;font-weight:600;color:var(--brd);margin-bottom:8px}
+.sheets-inp{width:100%;border:var(--border);border-radius:var(--r);padding:7px 12px;font-size:12px;font-family:'Courier New',monospace;color:var(--g900);background:var(--w)}
+.sheets-inp:focus{outline:none;border-color:var(--br)}
+.info-box{background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#92400E;line-height:1.7;margin-bottom:16px}
+.copy-btn{background:none;border:none;cursor:pointer;color:var(--br);font-size:11px;padding:2px 6px;border-radius:4px;font-family:'Noto Sans KR',sans-serif}
+.copy-btn:hover{background:var(--brl)}
+.qr-placeholder{width:80px;height:80px;background:var(--g100);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--g400);flex-shrink:0}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--w);border-radius:var(--rl);padding:24px;max-width:480px;width:100%;margin:16px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:16px}
+.modal-url{font-family:'Courier New',monospace;font-size:12px;background:var(--g50);border:var(--border);border-radius:var(--r);padding:10px;word-break:break-all;margin-bottom:12px;color:var(--br)}
+.modal-row{display:flex;gap:8px;margin-top:8px}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">신원</div>
+  <div><div class="hdr-title">신원종합개발㈜</div><div class="hdr-sub">안전보건조직도 — 현장 관리 페이지</div></div>
+  <div class="hdr-sp"></div>
+  <button class="btn btn-p btn-sm" onclick="saveAdmin()">💾 설정 저장</button>
+</header>
+
+<div class="wrap">
+  <div class="page-title">현장 URL 관리</div>
+  <div class="page-sub">각 현장에 배포할 URL을 생성하고 관리합니다. URL 파라미터로 현장별 데이터가 자동 분리됩니다.</div>
+
+  <!-- 기본 URL 설정 -->
+  <div class="card">
+    <div class="ch"><span class="ct">배포 URL 기본 주소</span></div>
+    <div class="cb">
+      <div class="info-box">
+        ⚠️ Netlify 배포 URL을 입력하세요. 현장별 URL은 이 주소에 <strong>?site=현장코드</strong>를 붙여 생성됩니다.
+      </div>
+      <div class="base-url-row">
+        <input id="base-url" class="base-url-inp" type="url" placeholder="https://melodic-heliotrope-e2b56c.netlify.app" value="">
+        <button class="btn btn-p" onclick="applyBaseUrl()">적용</button>
+      </div>
+      <!-- Google Sheets Apps Script URL -->
+      <div class="sheets-section">
+        <div class="sheets-title">📊 Google Sheets Apps Script URL (선택)</div>
+        <input id="sheets-url" class="sheets-inp" type="url" placeholder="https://script.google.com/macros/s/…/exec" value="">
+        <div style="font-size:11px;color:var(--brd);margin-top:6px">설정하면 각 현장에서 저장 시 구글 시트에 자동 동기화됩니다</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 현장 목록 -->
+  <div class="card">
+    <div class="ch">
+      <span class="ct">현장 목록</span>
+      <span class="ctag" id="site-count">0개 현장</span>
+    </div>
+    <div class="cb">
+      <div class="btn-row">
+        <button class="btn btn-p" onclick="openAddModal()">+ 현장 추가</button>
+        <button class="btn" onclick="exportSiteList()">⬇️ 현장 목록 내보내기</button>
+      </div>
+      <table class="sites-table">
+        <thead><tr><th>상태</th><th>현장명</th><th>현장코드</th><th>배포 URL</th><th>작업</th></tr></thead>
+        <tbody id="site-tbody"></tbody>
+      </table>
+      <div class="add-row" id="add-form" style="display:none">
+        <input id="new-name" placeholder="현장명 예) 강남 신축현장" style="flex:2">
+        <input id="new-code" placeholder="코드 예) gangnam01" style="flex:1">
+        <button class="btn btn-p btn-sm" onclick="addSite()">추가</button>
+        <button class="btn btn-sm" onclick="cancelAdd()">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apps Script 설정 가이드 -->
+  <div class="card">
+    <div class="ch"><span class="ct">Google Sheets 연동 설정 방법</span></div>
+    <div class="cb">
+      <ol style="font-size:13px;line-height:2;color:var(--g700);padding-left:18px">
+        <li>Google Drive 폴더에서 <strong>새 Google Sheets</strong> 생성</li>
+        <li>시트에서 <strong>도구 → Apps Script</strong> 클릭</li>
+        <li>아래 Apps Script 코드를 복사해 붙여넣기</li>
+        <li><strong>배포 → 새 배포 → 웹 앱</strong> 선택</li>
+        <li>실행: <strong>나</strong> / 액세스: <strong>모든 사용자</strong> 설정 후 배포</li>
+        <li>생성된 <strong>웹 앱 URL</strong>을 위의 Apps Script URL 입력란에 붙여넣기</li>
+        <li><strong>설정 저장</strong> 클릭 → 각 현장 URL 배포</li>
+      </ol>
+      <div style="margin-top:16px">
+        <div style="font-size:12px;font-weight:600;color:var(--g700);margin-bottom:8px">Apps Script 코드 <button class="copy-btn" onclick="copyScript()">복사</button></div>
+        <textarea id="script-code" readonly style="width:100%;height:300px;font-family:'Courier New',monospace;font-size:11px;border:var(--border);border-radius:var(--r);padding:10px;background:var(--g50);color:var(--g700);resize:vertical;line-height:1.6"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 현장 URL 상세 모달 -->
+<div class="modal-bg" id="url-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">현장 URL</div>
+    <div class="modal-url" id="modal-url"></div>
+    <div style="font-size:12px;color:var(--g500);margin-bottom:12px">이 URL을 현장 안전관리자에게 공유하세요. 브라우저 즐겨찾기로 저장하면 편리합니다.</div>
+    <div class="modal-row">
+      <button class="btn btn-p" style="flex:1" onclick="copyModalUrl()">📋 URL 복사</button>
+      <button class="btn" style="flex:1" onclick="openUrl()">🔗 URL 열기</button>
+      <button class="btn btn-sm" onclick="closeModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var ADMIN_KEY = 'shinwon_admin';
+var sites = [];
+var baseUrl = '';
+var sheetsUrl = '';
+var currentModalUrl = '';
+
+// Apps Script 코드 (이 파일에 내장)
+var GAS_CODE = `// 신원종합개발㈜ 안전보건조직도 — Google Sheets 연동 스크립트
+// 배포: 웹앱 / 실행: 나 / 액세스: 모든 사용자
+
+function doPost(e) {
+  try {
+    var body = e.postData ? e.postData.contents : '';
+    var data = JSON.parse(body);
+    
+    if (data.action === 'sync') {
+      syncSiteData(data);
+    }
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, message: '신원 안전보건 API 정상 작동 중' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function syncSiteData(data) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var siteCode = data.siteCode || '미설정';
+  var siteName = data.siteName || '';
+  var rows = data.rows || [];
+  var now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+  
+  // 1. 현장별 시트 업데이트
+  var sheetName = siteCode + (siteName ? ('_' + siteName) : '');
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    // 헤더 설정
+    sheet.getRange(1, 1, 1, 10).setValues([[
+      '현장코드', '현장명', '키', '직책', '역할', '반/조직', '성명', '전화번호', '비상역할', '저장일시'
+    ]]);
+    sheet.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#E0F7FA');
+  }
+  
+  // 기존 데이터 삭제 후 재작성 (2행부터)
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, 10).clearContent();
+  
+  if (rows.length > 0) {
+    var writeData = rows.map(function(r) {
+      return [r.siteCode||'', r.siteName||'', r.key||'', r.position||'', r.role||'', r.unit||'', r.name||'', r.tel||'', r.emergency||'', r.updatedAt||now];
+    });
+    sheet.getRange(2, 1, writeData.length, 10).setValues(writeData);
+  }
+  
+  // 2. 전체 현황 시트 업데이트
+  updateSummarySheet(ss, siteCode, siteName, rows, now);
+}
+
+function updateSummarySheet(ss, siteCode, siteName, rows, now) {
+  var summary = ss.getSheetByName('전체현황');
+  if (!summary) {
+    summary = ss.insertSheet('전체현황');
+    summary.getRange(1, 1, 1, 8).setValues([[
+      '현장코드', '현장명', '총인원', '입력완료', '소장', '안전관리자', '마지막저장', '상태'
+    ]]);
+    summary.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#00B0CA').setFontColor('#FFFFFF');
+    // 전체현황을 첫 번째 시트로
+    ss.setActiveSheet(summary);
+    ss.moveActiveSheet(1);
+  }
+  
+  var totalCount = rows.length;
+  var filledCount = rows.filter(function(r){ return r.name && r.name.trim(); }).length;
+  var siteRow = rows.find(function(r){ return r.key === 'e_site'; });
+  var smRow = rows.find(function(r){ return r.key === 'e_sm_0'; });
+  var siteMgr = siteRow ? (siteRow.name || '') : '';
+  var safetyMgr = smRow ? (smRow.name || '') : '';
+  var status = filledCount === totalCount ? '완료' : (filledCount > 0 ? '입력중' : '미입력');
+  
+  // 기존 행 찾아서 업데이트
+  var lastRow = summary.getLastRow();
+  var found = false;
+  for (var i = 2; i <= lastRow; i++) {
+    if (summary.getRange(i, 1).getValue() === siteCode) {
+      summary.getRange(i, 1, 1, 8).setValues([[siteCode, siteName, totalCount, filledCount, siteMgr, safetyMgr, now, status]]);
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    summary.appendRow([siteCode, siteName, totalCount, filledCount, siteMgr, safetyMgr, now, status]);
+  }
+  
+  // 상태에 따른 색상
+  var row = found ? getRowBySiteCode(summary, siteCode) : summary.getLastRow();
+  if (status === '완료') summary.getRange(row, 8).setBackground('#E1F5EE').setFontColor('#085041');
+  else if (status === '입력중') summary.getRange(row, 8).setBackground('#FFF3E0').setFontColor('#E65100');
+  else summary.getRange(row, 8).setBackground('#FEE2E2').setFontColor('#DC2626');
+}
+
+function getRowBySiteCode(sheet, code) {
+  var lastRow = sheet.getLastRow();
+  for (var i = 2; i <= lastRow; i++) {
+    if (sheet.getRange(i, 1).getValue() === code) return i;
+  }
+  return lastRow;
+}`;
+
+document.getElementById('script-code').value = GAS_CODE;
+
+// 초기화
+function init() {
+  var saved = localStorage.getItem(ADMIN_KEY);
+  if (saved) {
+    var d = JSON.parse(saved);
+    sites = d.sites || [];
+    baseUrl = d.baseUrl || '';
+    sheetsUrl = d.sheetsUrl || '';
+  }
+  if (baseUrl) document.getElementById('base-url').value = baseUrl;
+  if (sheetsUrl) document.getElementById('sheets-url').value = sheetsUrl;
+  renderSites();
+}
+
+function saveAdmin() {
+  baseUrl = document.getElementById('base-url').value.trim().replace(/\/$/, '');
+  sheetsUrl = document.getElementById('sheets-url').value.trim();
+  localStorage.setItem(ADMIN_KEY, JSON.stringify({ sites: sites, baseUrl: baseUrl, sheetsUrl: sheetsUrl }));
+  renderSites();
+  var btn = event.currentTarget;
+  btn.textContent = '✓ 저장됨';
+  setTimeout(function(){ btn.textContent = '💾 설정 저장'; }, 1500);
+}
+
+function applyBaseUrl() {
+  baseUrl = document.getElementById('base-url').value.trim().replace(/\/$/, '');
+  renderSites();
+}
+
+function buildUrl(code) {
+  var b = baseUrl || 'https://your-site.netlify.app';
+  return b + '?site=' + encodeURIComponent(code);
+}
+
+function renderSites() {
+  var tbody = document.getElementById('site-tbody');
+  document.getElementById('site-count').textContent = sites.length + '개 현장';
+  if (sites.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--g400);font-size:13px">현장이 없습니다. + 현장 추가 버튼을 클릭하세요</td></tr>';
+    return;
+  }
+  tbody.innerHTML = sites.map(function(s, i) {
+    var url = buildUrl(s.code);
+    var lsData = null;
+    try { lsData = localStorage.getItem('shinwon_v3_' + s.code); } catch(e){}
+    var statusDot = lsData ? '<span class="status-dot dot-ok"></span>데이터 있음' : '<span class="status-dot dot-empty"></span>미입력';
+    return '<tr>'
+      + '<td style="font-size:11px">' + statusDot + '</td>'
+      + '<td><input class="inp-sm" value="' + escAttr(s.name) + '" oninput="updateSite(' + i + ',\'name\',this.value)" style="width:140px"></td>'
+      + '<td><input class="inp-sm" value="' + escAttr(s.code) + '" oninput="updateSite(' + i + ',\'code\',this.value)" style="width:110px;font-family:\'Courier New\',monospace;font-size:12px"></td>'
+      + '<td class="url-cell"><a href="' + url + '" target="_blank" style="color:var(--br);text-decoration:none">' + url + '</a></td>'
+      + '<td style="white-space:nowrap">'
+      + '<button class="btn btn-sm" style="margin-right:4px" onclick="showUrlModal(' + i + ')">URL 보기</button>'
+      + '<button class="btn btn-sm" style="margin-right:4px" onclick="copyUrl(' + i + ')">복사</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="deleteSite(' + i + ')">삭제</button>'
+      + '</td></tr>';
+  }).join('');
+}
+
+function escAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function updateSite(i, field, val) {
+  sites[i][field] = val;
+  // URL 셀 즉시 업데이트
+  var rows = document.querySelectorAll('#site-tbody tr');
+  if (rows[i]) {
+    var urlCell = rows[i].querySelector('.url-cell a');
+    if (urlCell) { var u = buildUrl(sites[i].code); urlCell.href = u; urlCell.textContent = u; }
+  }
+}
+
+function addSite() {
+  var name = document.getElementById('new-name').value.trim();
+  var code = document.getElementById('new-code').value.trim().replace(/\s+/g, '_');
+  if (!name || !code) { alert('현장명과 현장코드를 모두 입력하세요'); return; }
+  if (sites.some(function(s){ return s.code === code; })) { alert('이미 같은 코드가 있습니다'); return; }
+  sites.push({ name: name, code: code });
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-code').value = '';
+  document.getElementById('add-form').style.display = 'none';
+  saveAdmin();
+}
+
+function deleteSite(i) {
+  if (!confirm('"' + sites[i].name + '" 현장을 삭제할까요?')) return;
+  sites.splice(i, 1);
+  saveAdmin();
+}
+
+function openAddModal() {
+  document.getElementById('add-form').style.display = 'flex';
+  document.getElementById('new-name').focus();
+}
+function cancelAdd() { document.getElementById('add-form').style.display = 'none'; }
+
+function copyUrl(i) {
+  var url = buildUrl(sites[i].code);
+  navigator.clipboard.writeText(url).then(function(){ alert('URL이 복사되었습니다:\n' + url); });
+}
+
+function showUrlModal(i) {
+  var s = sites[i];
+  currentModalUrl = buildUrl(s.code);
+  document.getElementById('modal-title').textContent = s.name + ' — 현장 URL';
+  document.getElementById('modal-url').textContent = currentModalUrl;
+  document.getElementById('url-modal').classList.add('open');
+}
+function closeModal() { document.getElementById('url-modal').classList.remove('open'); }
+function copyModalUrl() {
+  navigator.clipboard.writeText(currentModalUrl).then(function(){ alert('복사됨!'); });
+}
+function openUrl() { window.open(currentModalUrl, '_blank'); }
+
+function copyScript() {
+  var code = document.getElementById('script-code').value;
+  navigator.clipboard.writeText(code).then(function(){ alert('Apps Script 코드가 복사되었습니다!\n\nGoogle Sheets → 도구 → Apps Script에 붙여넣기 하세요.'); });
+}
+
+function exportSiteList() {
+  var lines = ['현장명,현장코드,배포URL'];
+  sites.forEach(function(s){ lines.push([s.name, s.code, buildUrl(s.code)].join(',')); });
+  var blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = '신원_현장URL목록.csv'; a.click();
+}
+
+document.getElementById('url-modal').addEventListener('click', function(e){
+  if (e.target === this) closeModal();
+});
+
+// 샘플 현장 자동 추가 (처음 방문 시)
+function loadSampleSites() {
+  if (sites.length === 0) {
+    sites = [
+      { name: '강남 신축현장', code: 'gangnam01' },
+      { name: '마포 리모델링현장', code: 'mapo02' },
+      { name: '서초 증축현장', code: 'seocho03' }
+    ];
+  }
+}
+
+init();
+// 처음 방문 시 샘플 추가
+if (sites.length === 0) { loadSampleSites(); renderSites(); }
+</script>
+</body>
+</html>
