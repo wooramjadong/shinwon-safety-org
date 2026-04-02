@@ -83,6 +83,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--g90
   <div><div class="logo-n">신원종합개발㈜</div><div class="logo-s">안전보건조직도 · 직무확인서 자동화</div></div>
   <div class="hdr-sp"></div>
   <button class="btn btn-p btn-sm" onclick="saveAll()">💾 저장</button>
+  <div id="hdr-site-badge" style="font-size:11px;font-weight:600;padding:3px 10px;background:var(--brl);color:var(--brd);border-radius:6px;display:none"></div>
   <div class="hdr-stat" id="hdr-stat">인원 설정 후 입력하세요</div>
 </header>
 <div class="body">
@@ -212,8 +213,18 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--g50);color:var(--g90
 </div>
 <script>
 // ===== STATE =====
+// URL 파라미터에서 현장코드 읽기
+var SITE_CODE = (function(){
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('site') || params.get('현장') || '';
+  return code.trim();
+})();
+var LS_KEY = SITE_CODE ? 'shinwon_v3_' + SITE_CODE : 'shinwon_v3';
+var SHEETS_URL = ''; // Apps Script 배포 URL — 설정 후 입력
+
 var S = {
   siteName: '',
+  siteCode: SITE_CODE,
   c: { sm:1, hm:0, gt:1, ct:1, at:1, qm:1 },
   units: [{ id:'u1',name:'구조반',count:5 },{ id:'u2',name:'반출반',count:4 },{ id:'u3',name:'복구반',count:5 }],
   p: {}
@@ -1125,12 +1136,56 @@ function downloadOrgDocx(type) {
   img.src = svgDataUri;
 }
 
+
+// ===== GOOGLE SHEETS 연동 =====
+function syncToSheets(onDone) {
+  if (!SHEETS_URL) { if(onDone) onDone(); return; }
+  var rows = [];
+  var now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+  Object.keys(S.p).forEach(function(key) {
+    var p = S.p[key];
+    if (!p) return;
+    rows.push({
+      siteCode: SITE_CODE || '미설정',
+      siteName: S.siteName || '',
+      key: key,
+      position: p.position || '',
+      role: p.role || '',
+      unit: p.unit || '',
+      name: p.name || '',
+      tel: p.tel || '',
+      emergency: p.emergency || '',
+      updatedAt: now
+    });
+  });
+  var payload = JSON.stringify({ action:'sync', siteCode: SITE_CODE||'미설정', siteName: S.siteName||'', rows: rows });
+  fetch(SHEETS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: payload
+  }).then(function(){
+    if(onDone) onDone(true);
+  }).catch(function(e){
+    console.warn('Sheets 연동 오류:', e);
+    if(onDone) onDone(false);
+  });
+}
+
 // ===== SAVE / EXPORT =====
 function saveAll() {
-  try { localStorage.setItem('shinwon_v3', JSON.stringify({ siteName:S.siteName||'', c:S.c, units:S.units, p:S.p, manual:S.manual||{} })); } catch(e){}
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ siteName:S.siteName||'', c:S.c, units:S.units, p:S.p, manual:S.manual||{} })); } catch(e){}
   updStat();
   var btn = event && event.currentTarget;
-  if (btn) { var orig=btn.textContent; btn.textContent='✓ 저장됨'; setTimeout(function(){ btn.textContent=orig; },1500); }
+  // Google Sheets 자동 동기화
+  syncToSheets(function(ok){
+    if (btn) {
+      var msg = ok === false ? '✓ 저장 (Sheets 연동 실패)' : (SHEETS_URL ? '✓ 저장 + Sheets 전송 완료' : '✓ 저장됨');
+      btn.textContent = msg;
+      setTimeout(function(){ btn.textContent='💾 저장'; },2500);
+    }
+  });
+  if (!SHEETS_URL && btn) { var orig=btn.textContent; btn.textContent='✓ 저장됨'; setTimeout(function(){ btn.textContent=orig; },1500); }
 }
 
 function exportJSON() {
@@ -1161,7 +1216,7 @@ function loadSample() {
 (function(){
   renderUnits();
   try {
-    var saved=localStorage.getItem('shinwon_v3');
+    var saved=localStorage.getItem(LS_KEY);
     if (saved) {
       var d=JSON.parse(saved);
       if(d.siteName!==undefined) S.siteName=d.siteName; if(d.c) S.c=d.c; if(d.units) S.units=d.units; if(d.p) S.p=d.p; if(d.manual) S.manual=d.manual;
@@ -1170,6 +1225,12 @@ function loadSample() {
       var sni = document.getElementById('site-name-input');
       if (sni && S.siteName) sni.value = S.siteName;
       if(Object.keys(S.p).length>0){ renderInput(); renderOrg(); renderSafetyOrg(); buildDocSel(); updStat(); }
+    }
+    // 현장코드 배지 표시
+    var badge = document.getElementById('hdr-site-badge');
+    if (badge && SITE_CODE) {
+      badge.textContent = '현장: ' + SITE_CODE;
+      badge.style.display = 'block';
     }
   } catch(e){}
 })();
