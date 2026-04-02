@@ -353,7 +353,7 @@ function renderOrg() {
   var t=document.getElementById('org-title'); if(t) t.textContent=(S.siteName?S.siteName+' ':'')+'현장 비상기구 조직도';
   var NW=156, NH=76, SNW=92, SNH=46, GAP=10, VG=36, PAD=32;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
-  var FK='Noto Sans KR,sans-serif', MK='JetBrains Mono,monospace';
+  var FK='Malgun Gothic,Apple SD Gothic Neo,sans-serif', MK='Consolas,monospace';
 
   var site = S.p['e_site']||{};
   var smList = range(S.c.sm).map(function(i){ return S.p['e_sm_'+i]||{}; });
@@ -511,7 +511,7 @@ function renderSafetyOrg() {
   var t=document.getElementById('safety-title'); if(t) t.textContent=(S.siteName?S.siteName+' ':'')+'안전보건관리기구 조직도';
   var NW=156, NH=76, SNW=106, SNH=46, GAP=12, VG=36, PAD=28;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
-  var FK='Noto Sans KR,sans-serif', MK='JetBrains Mono,monospace';
+  var FK='Malgun Gothic,Apple SD Gothic Neo,sans-serif', MK='Consolas,monospace';
 
   var site = S.p['e_site']||{};
 
@@ -937,16 +937,17 @@ function downloadAllDocx() {
 
 // SVG 크기 → A4/A3 가로/세로 자동 판단
 function getPageInfo(svgW, svgH) {
-  // 인쇄 가능 영역(mm) A4세로:190x277, A4가로:277x190, A3가로:400x277
   var ratio = svgW / svgH;
   var useA3 = svgW > 1100 || svgH > 800;
+  // twips 단위 (1 twip = 1/1440 inch)
+  // docx 라이브러리: landscape 시 width/height를 portrait 기준으로 입력해야 올바르게 저장됨
   if (ratio >= 1.2) {
-    // 가로형 조직도
+    // 가로형 조직도 → Landscape
     return useA3
-      ? { css:'A3 landscape', wMM:420, hMM:297, wEMU:23814, hEMU:13608, landscape:true }
-      : { css:'A4 landscape', wMM:297, hMM:210, wEMU:16839, hEMU:11906, landscape:true };
+      ? { css:'A3 landscape', wMM:420, hMM:297, wEMU:16839, hEMU:23814, landscape:true }
+      : { css:'A4 landscape', wMM:297, hMM:210, wEMU:11906, hEMU:16839, landscape:true };
   } else {
-    // 세로형 조직도
+    // 세로형 조직도 → Portrait
     return useA3
       ? { css:'A3 portrait', wMM:297, hMM:420, wEMU:16839, hEMU:23814, landscape:false }
       : { css:'A4 portrait', wMM:210, hMM:297, wEMU:11906, hEMU:16839, landscape:false };
@@ -965,11 +966,21 @@ function printOrg(type) {
   var svgH = parseFloat(svgEl.getAttribute('height')) || 600;
   var pi = getPageInfo(svgW, svgH);
 
-  // SVG에 폰트 embed (외부 구글폰트가 인쇄창에서 로드 안 될 수 있으므로 fallback 처리)
+  // SVG clone — 외부 리소스 제거, 폰트 시스템폰트로 교체, 크기 명시
   var svgClone = svgEl.cloneNode(true);
-  svgClone.setAttribute('width', '100%');
-  svgClone.setAttribute('height', 'auto');
-  svgClone.style.cssText = 'width:100%;height:auto;display:block';
+  svgClone.querySelectorAll('style').forEach(function(s){
+    s.textContent = s.textContent.replace(/@import[^;]+;/g, '');
+  });
+  svgClone.querySelectorAll('link,image[href^="http"]').forEach(function(el){ el.remove(); });
+  svgClone.querySelectorAll('text,[font-family]').forEach(function(el){
+    el.setAttribute('font-family','Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif');
+  });
+  // 원래 width/height 유지 + viewBox 설정으로 인쇄 시 전체 표시
+  svgClone.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+  svgClone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svgClone.removeAttribute('width');
+  svgClone.removeAttribute('height');
+  svgClone.style.cssText = 'width:100%;height:100%;display:block';
   var svgStr = new XMLSerializer().serializeToString(svgClone);
 
   var printHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
@@ -1014,12 +1025,22 @@ function downloadOrgDocx(type) {
   var svgH = parseFloat(svgEl.getAttribute('height')) || 600;
   var pi = getPageInfo(svgW, svgH);
 
-  // ── SVG를 inline base64 data URI로 변환 (CORS 우회)
+  // ── SVG → 외부 리소스 완전 제거 후 data URI (Canvas taint 방지)
   var svgClone = svgEl.cloneNode(true);
-  // 외부 폰트 link 제거 (Word에서 불필요)
-  svgClone.querySelectorAll('link').forEach(function(l){ l.remove(); });
-  // 한국어 폰트 스타일 직접 지정
-  svgClone.style.fontFamily = '"Malgun Gothic","Noto Sans KR",sans-serif';
+  // style 태그 안의 @import(구글폰트) 제거
+  svgClone.querySelectorAll('style').forEach(function(s){
+    s.textContent = s.textContent.replace(/@import[^;]+;/g, '');
+  });
+  // 외부 link/image 제거
+  svgClone.querySelectorAll('link,image[href^="http"]').forEach(function(el){ el.remove(); });
+  // 모든 text 요소의 font-family를 시스템 폰트로 교체
+  svgClone.querySelectorAll('text,[font-family]').forEach(function(el){
+    el.setAttribute('font-family','Malgun Gothic,Apple SD Gothic Neo,Arial,sans-serif');
+  });
+  svgClone.style.cssText = 'font-family:Malgun Gothic,Arial,sans-serif';
+  // width/height 명시 (canvas 크기 기준)
+  svgClone.setAttribute('width', svgW);
+  svgClone.setAttribute('height', svgH);
   var svgStr = '<?xml version="1.0" encoding="UTF-8"?>'
     + new XMLSerializer().serializeToString(svgClone);
 
@@ -1053,9 +1074,9 @@ function downloadOrgDocx(type) {
     var imgW = availW;
     var imgH = Math.round(imgW * aspect);
     if (imgH > availH) { imgH = availH; imgW = Math.round(imgH / aspect); }
-    // EMU → px (Word ImageRun은 px 단위)
-    var imgWpx = Math.round(imgW / 9525);
-    var imgHpx = Math.round(imgH / 9525);
+    // twips → px (Word ImageRun의 transformation은 px 단위, 1 twip = 1/15 px)
+    var imgWpx = Math.round(imgW / 15);
+    var imgHpx = Math.round(imgH / 15);
 
     var d = docx;
     var doc2 = new d.Document({
