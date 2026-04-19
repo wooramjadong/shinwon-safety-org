@@ -598,13 +598,12 @@ function hline(x1, x2, y, c) { return '<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" 
 function topNode(cx, cy, w, h, role, name, tel, k, fill, stroke, fk, mk) {
   var x=cx-w/2, y=cy-h/2;
   var cl = k ? ' style="cursor:pointer" onclick="goDoc(\''+k+'\')"' : '';
-  // 텍스트 위치: 직책(상단), 이름(중앙), 전화(하단) — 균등 배분
-  var yRole = y + 14;
-  var yName = tel ? y + h*0.45 : y + h*0.5;
-  var yTel  = y + h - 12;
+  var yRole = y + h*0.22;
+  var yName = tel ? y + h*0.50 : y + h*0.55;
+  var yTel  = y + h*0.80;
   return '<g'+cl+'>'
     +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="8" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1"/>'
-    +'<text x="'+cx+'" y="'+yRole+'" text-anchor="middle" dominant-baseline="hanging" font-size="10" font-weight="500" fill="rgba(255,255,255,0.78)" font-family="'+fk+'">'+esc(role)+'</text>'
+    +'<text x="'+cx+'" y="'+yRole+'" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="500" fill="rgba(255,255,255,0.78)" font-family="'+fk+'">'+esc(role)+'</text>'
     +'<text x="'+cx+'" y="'+yName+'" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#fff" font-family="'+fk+'">'+esc(name)+'</text>'
     +(tel?'<text x="'+cx+'" y="'+yTel+'" text-anchor="middle" dominant-baseline="central" font-size="10" fill="rgba(255,255,255,0.68)" font-family="'+mk+'">'+esc(tel)+'</text>':'')
     +'</g>';
@@ -613,12 +612,12 @@ function topNode(cx, cy, w, h, role, name, tel, k, fill, stroke, fk, mk) {
 function midNode(cx, cy, w, h, role, name, tel, k, fill, stroke, textC, fk, mk) {
   var x=cx-w/2, y=cy-h/2;
   var cl = k ? ' style="cursor:pointer" onclick="goDoc(\''+k+'\')"' : '';
-  var yRole = y + 14;
-  var yName = tel ? y + h*0.46 : y + h*0.52;
-  var yTel  = y + h - 12;
+  var yRole = y + h*0.22;
+  var yName = tel ? y + h*0.50 : y + h*0.58;
+  var yTel  = y + h*0.80;
   return '<g'+cl+'>'
     +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="8" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1"/>'
-    +'<text x="'+cx+'" y="'+yRole+'" text-anchor="middle" dominant-baseline="hanging" font-size="10" font-weight="500" fill="'+textC+'" font-family="'+fk+'">'+esc(role)+'</text>'
+    +'<text x="'+cx+'" y="'+yRole+'" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="500" fill="'+textC+'" font-family="'+fk+'">'+esc(role)+'</text>'
     +'<text x="'+cx+'" y="'+yName+'" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" fill="#1A2130" font-family="'+fk+'">'+esc(name)+'</text>'
     +(tel?'<text x="'+cx+'" y="'+yTel+'" text-anchor="middle" dominant-baseline="central" font-size="10" fill="#6B7785" font-family="'+mk+'">'+esc(tel)+'</text>':'')
     +'</g>';
@@ -633,7 +632,10 @@ function snNode(x, y, w, h, lbl, name, k, fk) {
   var nameColor  = isEmpty ? '#CBD5E1' : '#1A2130';
   var nameText   = isEmpty ? '미배정' : name;
   return '<g'+cl+'>'
-    +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6" fill="'+rectFill+'" stroke="'+rectStroke+'" stroke-width="1"'+rectDash+'/>'    +'<text x="'+(x+w/2)+'" y="'+(y+12)+'" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="600" fill="'+( isEmpty?'#CBD5E1':'#9AA3AE')+'" font-family="'+fk+'">'+esc(lbl)+'</text>'    +'<text x="'+(x+w/2)+'" y="'+(y+h/2+6)+'" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="'+(isEmpty?'400':'700')+'" fill="'+nameColor+'" font-family="'+fk+'">'+esc(nameText)+'</text>'    +'</g>';
+    +'<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6" fill="'+rectFill+'" stroke="'+rectStroke+'" stroke-width="1"'+rectDash+'/>'
+    +'<text x="'+(x+w/2)+'" y="'+(y+h*0.30)+'" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="600" fill="'+(isEmpty?'#CBD5E1':'#9AA3AE')+'" font-family="'+fk+'">'+esc(lbl)+'</text>'
+    +'<text x="'+(x+w/2)+'" y="'+(y+h*0.72)+'" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="'+(isEmpty?'400':'700')+'" fill="'+nameColor+'" font-family="'+fk+'">'+esc(nameText)+'</text>'
+    +'</g>';
 }
 
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
