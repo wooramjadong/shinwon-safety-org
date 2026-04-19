@@ -362,159 +362,128 @@ function updStat() {
 // ===== SVG ORG — 비상기구 =====
 function renderOrg() {
   var t=document.getElementById('org-title'); if(t) t.textContent=(S.siteName?S.siteName+' ':'')+'현장 비상기구 조직도';
-  var NW=156, NH=76, SNW=92, SNH=46, GAP=10, VG=36, PAD=32;
+
+  var A4W=740, PAD=20, VG=26, BGAP=10;
+  var NW=152, NH=56;
+  var LNW=128, LNH=50;
+  var MNW=68, MNH=34, MGAP=6;
+  var BPAD=10, TH=18, LPAD=8;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
   var FK='Malgun Gothic,Apple SD Gothic Neo,sans-serif', MK='Consolas,monospace';
 
-  var site = S.p['e_site']||{};
-  var smList = range(S.c.sm).map(function(i){ return S.p['e_sm_'+i]||{}; });
-  var teams = [];
-  range(S.c.gt).forEach(function(i){ teams.push({ p:S.p['e_gt_'+i]||{}, lbl:'공무팀장', k:'e_gt_'+i }); });
-  range(S.c.ct).forEach(function(i){ teams.push({ p:S.p['e_ct_'+i]||{}, lbl:'공사팀장', k:'e_ct_'+i }); });
-  range(S.c.at).forEach(function(i){ teams.push({ p:S.p['e_at_'+i]||{}, lbl:'관리팀장', k:'e_at_'+i }); });
+  var site=S.p['e_site']||{};
+  var smList=range(S.c.sm).map(function(i){ return S.p['e_sm_'+i]||{}; });
 
-  // 그룹 레이아웃: 인원에 따라 열 수 자동 결정
-  var groups = S.units.map(function(u) {
-    var members = range(u.count).map(function(i){
-      return { k:'gd_'+u.id+'_'+i, p:S.p['gd_'+u.id+'_'+i]||{}, lbl:u.name+' '+(i+1) };
-    });
-    var n = members.length;
-    var cols = n <= 2 ? n : n <= 4 ? 2 : n <= 6 ? 3 : n <= 9 ? 3 : 4;
-    var rows2 = Math.ceil(n/cols);
-    var gw = cols*(SNW+GAP)-GAP+24;
-    var gh = rows2*(SNH+8)-8+44;
-    return { name:u.name, members:members, cols:cols, rows:rows2, gw:gw, gh:gh };
-  });
-
-  // 너비 계산
-  var smRowW = smList.length*(NW+GAP)-GAP;
-  var teamRowW = teams.length*(NW+GAP)-GAP;
-  var totalGroupW = groups.length>0 ? groups.reduce(function(s,g){ return s+g.gw+GAP; },0)-GAP : 0;
-  var W = Math.max(smRowW, teamRowW, totalGroupW) + PAD*2 + 60;
-  W = Math.max(W, 700);
-
-  // Y positions
-  var y0=PAD, y1=y0+NH+VG;
-  var y2 = smList.length>0 ? y1+NH+VG : y1;
-  var y3 = teams.length>0 ? y2+NH+VG+8 : y2+8;
-
-  // 그룹 배치 (한 행에 모두 배치, 너무 넓으면 2행)
-  var MAX_ROW_W = W - PAD*2;
-  var groupRows = [];
-  if (totalGroupW <= MAX_ROW_W || groups.length <= 1) {
-    groupRows = [groups];
-  } else {
-    // 2행으로 분할
-    var half = Math.ceil(groups.length/2);
-    groupRows = [groups.slice(0,half), groups.slice(half)];
+  // 팀장 목록 (B안: 순서대로 반에 매핑)
+  var leaders=[];
+  range(S.c.gt).forEach(function(i){ leaders.push({ p:S.p['e_gt_'+i]||{}, lbl:'공무팀장', k:'e_gt_'+i }); });
+  range(S.c.ct).forEach(function(i){ leaders.push({ p:S.p['e_ct_'+i]||{}, lbl:'공사팀장', k:'e_ct_'+i }); });
+  range(S.c.at).forEach(function(i){ leaders.push({ p:S.p['e_at_'+i]||{}, lbl:'관리팀장', k:'e_at_'+i }); });
+  range(S.c.qm).forEach(function(i){ leaders.push({ p:S.p['e_qm_'+i]||{}, lbl:'품질관리자', k:'e_qm_'+i }); });
+  // 팀장 없으면 안전관리자 → 현장소장 순 fallback
+  if (leaders.length===0) {
+    if (smList.length>0) range(S.c.sm).forEach(function(i){ leaders.push({ p:S.p['e_sm_'+i]||{}, lbl:'안전관리자', k:'e_sm_'+i }); });
+    else leaders.push({ p:site, lbl:'현장소장', k:'e_site' });
   }
 
-  var maxRowH = 0;
-  groupRows.forEach(function(row) {
-    var rh = row.reduce(function(m,g){ return Math.max(m,g.gh); }, 0);
-    maxRowH = Math.max(maxRowH, rh);
-  });
-  var H = y3 + groupRows.length*(maxRowH+VG) + PAD;
-
-  // 그룹 x 좌표 계산
-  groupRows.forEach(function(row) {
-    var rw = row.reduce(function(s,g){ return s+g.gw+GAP; },0)-GAP;
-    var rx = W/2 - rw/2;
-    row.forEach(function(g){ g.x=rx; rx+=g.gw+GAP; });
-  });
-
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:'+FK+';display:block">';
-
-  var cx0=W/2, cy0=y0+NH/2;
-
-  // 안전관리자 노드
-  var smNodes = smList.map(function(p,i) {
-    var totalW=smList.length*(NW+GAP)-GAP;
-    var cx=W/2-totalW/2+i*(NW+GAP)+NW/2;
-    return { cx:cx, cy:y1+NH/2, p:p, k:'e_sm_'+i };
+  // units → 반 박스 계산
+  var units=S.units.map(function(u,i){
+    var ldr=leaders[Math.min(i, leaders.length-1)];
+    var members=range(u.count).map(function(j){ return { k:'gd_'+u.id+'_'+j, p:S.p['gd_'+u.id+'_'+j]||{}, lbl:u.name+' '+(j+1) }; });
+    var n=members.length;
+    var cols=n===0?1:n<=2?n:n<=6?3:4;
+    var rows=n===0?0:Math.ceil(n/cols);
+    var mW=cols*(MNW+MGAP)-MGAP;
+    var gw=Math.max(LNW+BPAD*2, mW+BPAD*2);
+    var gh=TH+LPAD+LNH+(n>0?LPAD+rows*(MNH+MGAP)-MGAP+BPAD:BPAD);
+    return { name:u.name, leader:ldr, members:members, cols:cols, rows:rows, gw:gw, gh:gh };
   });
 
-  // 팀장 노드
-  var teamNodes = teams.map(function(t,i) {
-    var totalW=teams.length*(NW+GAP)-GAP;
-    var tx=W/2-totalW/2+i*(NW+GAP)+NW/2;
-    return { cx:tx, cy:y2+NH/2, p:t.p, lbl:t.lbl, k:t.k };
+  // 반 박스 행 배치 (A4 폭 기준 자동 줄바꿈)
+  var totalBW=units.reduce(function(s,u){ return s+u.gw+BGAP; },0)-(units.length?BGAP:0);
+  var boxRows=units.length<=1||totalBW<=A4W-PAD*2 ? [units] : [units.slice(0,Math.ceil(units.length/2)), units.slice(Math.ceil(units.length/2))];
+  var maxBH=units.reduce(function(m,u){ return Math.max(m,u.gh); },0);
+
+  var W=Math.max(A4W, totalBW+PAD*2);
+  var y0=PAD, cy0=y0+NH/2;
+  var y1=y0+NH+VG;
+  var smBottom=smList.length>0?y1+NH:y0+NH;
+  var y2=smBottom+VG;
+  var H=y2+boxRows.length*(maxBH+VG)+PAD;
+
+  boxRows.forEach(function(row){
+    var rw=row.reduce(function(s,u){ return s+u.gw+BGAP; },0)-(row.length?BGAP:0);
+    var rx=W/2-rw/2;
+    row.forEach(function(u){ u.x=rx; rx+=u.gw+BGAP; });
   });
 
-  // === 연결선 ===
-  // 소장 → 안전관리자
-  var midY01 = cy0+NH/2+VG/2;
-  svg += vline(cx0, cy0+NH/2, midY01, LC);
-  if (smNodes.length>1) svg += hline(smNodes[0].cx, smNodes[smNodes.length-1].cx, midY01, LC);
-  smNodes.forEach(function(n){ svg += vline(n.cx, midY01, n.cy-NH/2, LC); });
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" style="font-family:'+FK+';display:block">';
 
-  // 안전관리자 → 팀장
-  if (teamNodes.length>0 && smNodes.length>0) {
-    var midY12 = y1+NH+VG/2;
-    svg += vline(W/2, y1+NH, midY12, LC);
-    if (teamNodes.length>1) svg += hline(teamNodes[0].cx, teamNodes[teamNodes.length-1].cx, midY12, LC);
-    teamNodes.forEach(function(n){ svg += vline(n.cx, midY12, n.cy-NH/2, LC); });
+  // 현장소장
+  svg+=topNode(W/2, cy0, NW+20, NH, '비상상황대장 · 현장소장', site.name||'(미입력)', site.tel||'', 'e_site', BR, BRD, FK, MK);
+
+  // 안전관리자
+  var smNodes=smList.map(function(p,i){ var tw=smList.length*(NW+BGAP)-BGAP; return { cx:W/2-tw/2+i*(NW+BGAP)+NW/2, cy:y1+NH/2, p:p, k:'e_sm_'+i }; });
+  if (smNodes.length>0) {
+    var mY01=cy0+NH/2+VG/2;
+    svg+=vline(W/2,cy0+NH/2,mY01,LC);
+    if (smNodes.length>1) svg+=hline(smNodes[0].cx,smNodes[smNodes.length-1].cx,mY01,LC);
+    smNodes.forEach(function(n){ svg+=vline(n.cx,mY01,n.cy-NH/2,LC); });
+    smNodes.forEach(function(n){ svg+=midNode(n.cx,n.cy,NW,NH,'비상상황부대장 · 안전관리자',n.p.name||'(미입력)',n.p.tel||'',n.k,BRL,BRM,BRD,FK,MK); });
   }
 
-  // 팀장 → 그룹 (공사팀장 위치에서 내려감)
-  if (groups.length>0 && groupRows.length>0) {
-    var srcIdx = Math.min(S.c.gt, teamNodes.length-1);
-    var srcCX = teamNodes.length>0 ? teamNodes[srcIdx].cx : W/2;
-    var srcBottomY = teamNodes.length>0 ? y2+NH : y1+NH;
-    var midY23 = srcBottomY+VG/2;
-    svg += vline(srcCX, srcBottomY, midY23, LC);
-    // 첫 행 그룹들과 수평 연결
-    var row0 = groupRows[0];
-    if (row0.length>0) {
-      var gL = row0[0].x+row0[0].gw/2;
-      var gR = row0[row0.length-1].x+row0[row0.length-1].gw/2;
-      // srcCX → 첫 행 중앙까지 수평
-      var row0CX = (gL+gR)/2;
-      if (Math.abs(srcCX - row0CX) > 5) {
-        svg += hline(srcCX, row0CX, midY23, LC);
-        svg += vline(row0CX, midY23, y3, LC);
+  // 안전관리자/소장 → 반 박스들 연결
+  if (units.length>0) {
+    var mY12=smBottom+VG/2;
+    svg+=vline(W/2,smBottom,mY12,LC);
+    var r0=boxRows[0];
+    var gL=r0[0].x+r0[0].gw/2, gR=r0[r0.length-1].x+r0[r0.length-1].gw/2, rCX=(gL+gR)/2;
+    if (Math.abs(W/2-rCX)>5){ svg+=hline(W/2,rCX,mY12,LC); svg+=vline(rCX,mY12,y2,LC); } else svg+=vline(W/2,mY12,y2,LC);
+    if (r0.length>1) svg+=hline(gL,gR,y2,LC);
+    r0.forEach(function(u){ svg+=vline(u.x+u.gw/2,y2,y2+4,LC); });
+    if (boxRows.length>1) {
+      var r1=boxRows[1], y2b=y2+maxBH+VG;
+      var r1L=r1[0].x+r1[0].gw/2, r1R=r1[r1.length-1].x+r1[r1.length-1].gw/2;
+      svg+=vline(W/2,y2+maxBH,y2b,LC);
+      if (r1.length>1) svg+=hline(r1L,r1R,y2b,LC);
+      r1.forEach(function(u){ svg+=vline(u.x+u.gw/2,y2b,y2b+4,LC); });
+    }
+  }
+
+  // 반 박스 렌더링
+  boxRows.forEach(function(row,ri){
+    var boxY=y2+ri*(maxBH+VG);
+    row.forEach(function(u){
+      var gx=u.x, gy=boxY;
+      // 박스 배경
+      svg+='<rect x="'+gx+'" y="'+gy+'" width="'+u.gw+'" height="'+u.gh+'" rx="10" fill="#F8FAFB" stroke="#CBD1D8" stroke-width="1.5"/>';
+      // 반 이름 레이블
+      svg+='<text x="'+(gx+u.gw/2)+'" y="'+(gy+TH/2+3)+'" text-anchor="middle" dominant-baseline="central" font-size="9.5" font-weight="700" fill="#6B7785" font-family="'+FK+'">'+esc(u.name)+'</text>';
+      // 팀장 노드
+      var ldrCX=gx+u.gw/2, ldrCY=gy+TH+LPAD+LNH/2;
+      svg+=midNode(ldrCX, ldrCY, LNW, LNH, u.leader.lbl, u.leader.p.name||'(미입력)', u.leader.p.tel||'', u.leader.k, BRL, BRM, BRD, FK, MK);
+      // 구분선 + 반원들
+      if (u.members.length>0) {
+        var sepY=gy+TH+LPAD+LNH+LPAD/2;
+        svg+='<line x1="'+(gx+6)+'" y1="'+sepY+'" x2="'+(gx+u.gw-6)+'" y2="'+sepY+'" stroke="#E2E6EA" stroke-width="1"/>';
+        var membY=sepY+LPAD/2;
+        var mTW=u.cols*(MNW+MGAP)-MGAP;
+        var mX=gx+u.gw/2-mTW/2;
+        // 팀장 → 반원 연결
+        svg+=vline(ldrCX, ldrCY+LNH/2, membY, LC);
+        if (u.cols>1) svg+=hline(mX+MNW/2, mX+(u.cols-1)*(MNW+MGAP)+MNW/2, membY, LC);
+        u.members.forEach(function(m,idx){
+          var col=idx%u.cols, r2=Math.floor(idx/u.cols);
+          var nx=mX+col*(MNW+MGAP), ny=membY+(r2===0?4:4+r2*(MNH+MGAP));
+          if (r2===0) svg+=vline(nx+MNW/2,membY,ny,LC);
+          svg+=snNode(nx, ny, MNW, MNH, m.lbl, m.p.name||'', m.k, FK);
+        });
       }
-      if (row0.length>1) svg += hline(gL, gR, y3, LC);
-      row0.forEach(function(g){ svg += vline(g.x+g.gw/2, y3, y3+4, LC); });
-    }
-    // 2행이면 추가 연결
-    if (groupRows.length>1) {
-      var row1 = groupRows[1];
-      var y3b = y3+maxRowH+VG;
-      var row1L = row1[0].x+row1[0].gw/2;
-      var row1R = row1[row1.length-1].x+row1[row1.length-1].gw/2;
-      svg += vline(W/2, y3+maxRowH, y3b, LC);
-      if (row1.length>1) svg += hline(row1L, row1R, y3b, LC);
-      row1.forEach(function(g){ svg += vline(g.x+g.gw/2, y3b, y3b+4, LC); });
-    }
-  }
-
-  // === 노드 ===
-  svg += topNode(cx0, cy0, NW+20, NH, '비상상황대장 · 현장소장', site.name||'(미입력)', site.tel||'', 'e_site', BR, BRD, FK, MK);
-  smNodes.forEach(function(n) {
-    svg += midNode(n.cx, n.cy, NW, NH, '비상상황부대장 · 안전관리자', n.p.name||'(미입력)', n.p.tel||'', n.k, BRL, BRM, BRD, FK, MK);
-  });
-  teamNodes.forEach(function(n) {
-    svg += midNode(n.cx, n.cy, NW, NH, n.lbl, n.p.name||'(미입력)', n.p.tel||'', n.k, BRL, BRM, BRD, FK, MK);
-  });
-
-  // 그룹 박스
-  groupRows.forEach(function(row, rowIdx) {
-    var rowY = y3 + rowIdx*(maxRowH+VG);
-    row.forEach(function(g) {
-      var gx=g.x, gy=rowY;
-      svg += '<rect x="'+gx+'" y="'+gy+'" width="'+g.gw+'" height="'+g.gh+'" rx="10" fill="#F8FAFB" stroke="#E2E6EA" stroke-width="1"/>';
-      svg += '<text x="'+(gx+g.gw/2)+'" y="'+(gy+18)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#9AA3AE" font-family="'+FK+'">'+esc(g.name)+'</text>';
-      g.members.forEach(function(m, idx) {
-        var col=idx%g.cols, row2=Math.floor(idx/g.cols);
-        var nx=gx+12+col*(SNW+GAP), ny=gy+28+row2*(SNH+8);
-        svg += snNode(nx, ny, SNW, SNH, m.lbl, m.p.name||'', m.k, FK);
-      });
     });
   });
 
-  svg += '</svg>';
-  document.getElementById('org-wrap').innerHTML = svg;
+  svg+='</svg>';
+  document.getElementById('org-wrap').innerHTML=svg;
 }
 
 function renderSafetyOrg() {
@@ -543,45 +512,33 @@ function renderSafetyOrg() {
   range(S.c.at).forEach(function(i){ lineList.push({ p:S.p['e_at_'+i]||{}, lbl:'관리팀장', k:'e_at_'+i }); });
   range(S.c.qm).forEach(function(i){ lineList.push({ p:S.p['e_qm_'+i]||{}, lbl:'품질관리자', k:'e_qm_'+i }); });
 
-  // 반원 그룹
-  var gDefs = [];
-  var constKeys = range(S.c.ct).map(function(i){ return { k:'e_ct_'+i, p:S.p['e_ct_'+i]||{}, lbl:'공사팀장' }; });
-  S.units.forEach(function(u){ range(u.count).forEach(function(i){ constKeys.push({ k:'gd_'+u.id+'_'+i, p:S.p['gd_'+u.id+'_'+i]||{}, lbl:u.name+' '+(i+1) }); }); });
-  if (constKeys.length) gDefs.push({ name:'건축·공사 (관리감독자)', keys:constKeys });
-  var gmKeys = range(S.c.gt).map(function(i){ return { k:'e_gt_'+i, p:S.p['e_gt_'+i]||{}, lbl:'공무팀장' }; })
-    .concat(range(S.c.at).map(function(i){ return { k:'e_at_'+i, p:S.p['e_at_'+i]||{}, lbl:'관리팀장' }; }));
-  if (gmKeys.length) gDefs.push({ name:'공무·관리 (관리감독자)', keys:gmKeys });
-  var qmKeys = range(S.c.qm).map(function(i){ return { k:'e_qm_'+i, p:S.p['e_qm_'+i]||{}, lbl:'품질관리자' }; });
-  if (qmKeys.length) gDefs.push({ name:'품질', keys:qmKeys });
+  // A4 width constraint: dynamically size nodes to fit 740px
+  var A4W = 740;
+  var groupGap = (staffList.length>0 && lineList.length>0) ? MGAP : 0;
+  var innerGaps = (staffList.length>1 ? (staffList.length-1)*GAP : 0)
+                + (lineList.length>1 ? (lineList.length-1)*GAP : 0);
+  var totalNodes = staffList.length + lineList.length;
+  var dynNW = totalNodes > 0
+    ? Math.min(NW, Math.floor((A4W - PAD*2 - groupGap - innerGaps) / totalNodes))
+    : NW;
+  NW = Math.max(dynNW, 80);
 
-  var glayouts = gDefs.map(function(g){
-    var cols=Math.min(g.keys.length,4), rows2=Math.ceil(g.keys.length/cols);
-    return { g:g, cols:cols, rows2:rows2, gw:cols*(SNW+GAP)-GAP+24, gh:rows2*(SNH+8)-8+40 };
-  });
+  var staffW = staffList.length>0 ? staffList.length*(NW+GAP)-GAP : 0;
+  var lineW  = lineList.length>0  ? lineList.length*(NW+GAP)-GAP  : 0;
+  var rowW   = staffW + groupGap + lineW;
+  var W = Math.max(rowW + PAD*2, A4W);
 
-  // 너비 계산
-  var staffW = staffList.length*(NW+GAP)-GAP;
-  var lineW  = lineList.length*(NW+GAP)-GAP;
-  var gdW    = glayouts.length>0 ? glayouts.reduce(function(s,gl){ return s+gl.gw+GAP; },0)-GAP : 0;
-  var maxGH  = glayouts.reduce(function(m,gl){ return Math.max(m,gl.gh); },0);
-  var rowW   = staffW + (staffList.length>0&&lineList.length>0 ? MGAP : 0) + lineW;
-  var W = Math.max(rowW, gdW) + PAD*2 + 40;
-  W = Math.max(W, 820);
-
-  var y0=PAD, y1=y0+NH+VG, y2=y1+NH+VG+8;
-  var H = y2 + (maxGH>0?maxGH:0) + PAD + 24;
+  var y0=PAD, y1=y0+NH+VG;
+  var H = y1 + NH + PAD + 20;
 
   // X 위치
   var rowStartX = W/2 - rowW/2;
   var staffStartX = rowStartX;
-  var lineStartX  = rowStartX + staffW + (staffList.length>0 ? MGAP : 0);
+  var lineStartX  = rowStartX + staffW + groupGap;
   var staffCXs = staffList.map(function(_,i){ return staffStartX+i*(NW+GAP)+NW/2; });
   var lineCXs  = lineList.map(function(_,i){  return lineStartX+i*(NW+GAP)+NW/2;  });
   var allCXs   = staffCXs.concat(lineCXs);
   var siteCX   = allCXs.length>0 ? (allCXs[0]+allCXs[allCXs.length-1])/2 : W/2;
-  var lineCenterX = lineCXs.length>0 ? (lineCXs[0]+lineCXs[lineCXs.length-1])/2 : W/2;
-  var gdStartX = lineCenterX - gdW/2;
-  glayouts.forEach(function(gl){ gl.x=gdStartX; gdStartX+=gl.gw+GAP; });
 
   var cy0 = y0+NH/2;
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:'+FK+';display:block">';
@@ -591,14 +548,6 @@ function renderSafetyOrg() {
   svg += vline(siteCX, cy0+NH/2, midY, LC);
   if (allCXs.length>1) svg += hline(allCXs[0], allCXs[allCXs.length-1], midY, LC);
   allCXs.forEach(function(cx){ svg += vline(cx, midY, y1, LC); });
-
-  // 팀장 → 반원 그룹
-  if (glayouts.length>0 && lineCXs.length>0) {
-    var midY12 = y1+NH+(y2-y1-NH)/2;
-    svg += vline(lineCenterX, y1+NH, midY12, LC);
-    if (glayouts.length>1) svg += hline(glayouts[0].x+glayouts[0].gw/2, glayouts[glayouts.length-1].x+glayouts[glayouts.length-1].gw/2, midY12, LC);
-    glayouts.forEach(function(gl){ svg += vline(gl.x+gl.gw/2, midY12, y2, LC); });
-  }
 
   // 참모 ↔ 라인 점선 (지도·조언 관계)
   if (staffCXs.length>0 && lineCXs.length>0) {
@@ -633,16 +582,6 @@ function renderSafetyOrg() {
   lineCXs.forEach(function(cx,i){
     var d=lineList[i];
     svg += midNode(cx, y1+NH/2, NW, NH, d.lbl, d.p.name||'(미입력)', d.p.tel||'', d.k, BRL, BRM, BRD, FK, MK);
-  });
-
-  glayouts.forEach(function(gl){
-    var gx=gl.x, gy=y2;
-    svg += '<rect x="'+gx+'" y="'+gy+'" width="'+gl.gw+'" height="'+gl.gh+'" rx="10" fill="#F8FAFB" stroke="#E2E6EA" stroke-width="1"/>';
-    svg += '<text x="'+(gx+gl.gw/2)+'" y="'+(gy+18)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#9AA3AE" font-family="'+FK+'">'+esc(gl.g.name)+'</text>';
-    gl.g.keys.forEach(function(m,idx){
-      var col=idx%gl.cols, r2=Math.floor(idx/gl.cols);
-      svg += snNode(gx+12+col*(SNW+GAP), gy+28+r2*(SNH+8), SNW, SNH, m.lbl, m.p.name||'(미입력)', m.k, FK);
-    });
   });
 
   // 법적 근거
