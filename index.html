@@ -520,92 +520,133 @@ function renderOrg() {
 function renderSafetyOrg() {
   buildKeys();
   var t=document.getElementById('safety-title'); if(t) t.textContent=(S.siteName?S.siteName+' ':'')+'안전보건관리기구 조직도';
-  var NW=156, NH=76, SNW=106, SNH=46, GAP=12, VG=36, PAD=28;
+  var NW=150, NH=72, SNW=100, SNH=44, GAP=10, VG=38, PAD=28, MGAP=36;
   var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
+  var SC='#E8F5E9', SCS='#81C784', SCT='#2E7D32';
   var FK='Malgun Gothic,Apple SD Gothic Neo,sans-serif', MK='Consolas,monospace';
 
   var site = S.p['e_site']||{};
 
-  // level 2: 안전관리자 + 보건관리자
-  var l2 = [];
-  range(S.c.sm).forEach(function(i){ l2.push({ p:S.p['e_sm_'+i]||{}, lbl:'안전관리자', k:'e_sm_'+i }); });
-  if (S.c.hm === 0) {
-    l2.push({ p:{ name:'미정' }, lbl:'보건관리자', k:null });
+  // 참모기관: 안전관리자 + 보건관리자 (현장소장 보좌 — 산업안전보건법 제17조·제18조)
+  var staffList = [];
+  range(S.c.sm).forEach(function(i){ staffList.push({ p:S.p['e_sm_'+i]||{}, lbl:'안전관리자', k:'e_sm_'+i }); });
+  if (S.c.hm===0) {
+    staffList.push({ p:{ name:'미정' }, lbl:'보건관리자', k:null });
   } else {
-    range(S.c.hm).forEach(function(i){ l2.push({ p:S.p['e_hm_'+i]||{}, lbl:'보건관리자', k:'e_hm_'+i }); });
+    range(S.c.hm).forEach(function(i){ staffList.push({ p:S.p['e_hm_'+i]||{}, lbl:'보건관리자', k:'e_hm_'+i }); });
   }
 
-  // level 3: 그룹별 관리감독자
+  // 라인기관: 관리감독자 팀장들 (현장소장 직속 — 산업안전보건법 제16조)
+  var lineList = [];
+  range(S.c.gt).forEach(function(i){ lineList.push({ p:S.p['e_gt_'+i]||{}, lbl:'공무팀장', k:'e_gt_'+i }); });
+  range(S.c.ct).forEach(function(i){ lineList.push({ p:S.p['e_ct_'+i]||{}, lbl:'공사팀장', k:'e_ct_'+i }); });
+  range(S.c.at).forEach(function(i){ lineList.push({ p:S.p['e_at_'+i]||{}, lbl:'관리팀장', k:'e_at_'+i }); });
+  range(S.c.qm).forEach(function(i){ lineList.push({ p:S.p['e_qm_'+i]||{}, lbl:'품질관리자', k:'e_qm_'+i }); });
+
+  // 반원 그룹
   var gDefs = [];
   var constKeys = range(S.c.ct).map(function(i){ return { k:'e_ct_'+i, p:S.p['e_ct_'+i]||{}, lbl:'공사팀장' }; });
-  S.units.forEach(function(u) {
-    range(u.count).forEach(function(i){ constKeys.push({ k:'gd_'+u.id+'_'+i, p:S.p['gd_'+u.id+'_'+i]||{}, lbl:u.name+(i+1) }); });
-  });
-  if (constKeys.length) gDefs.push({ name:'건축·공사', keys:constKeys });
-
+  S.units.forEach(function(u){ range(u.count).forEach(function(i){ constKeys.push({ k:'gd_'+u.id+'_'+i, p:S.p['gd_'+u.id+'_'+i]||{}, lbl:u.name+' '+(i+1) }); }); });
+  if (constKeys.length) gDefs.push({ name:'건축·공사 (관리감독자)', keys:constKeys });
   var gmKeys = range(S.c.gt).map(function(i){ return { k:'e_gt_'+i, p:S.p['e_gt_'+i]||{}, lbl:'공무팀장' }; })
     .concat(range(S.c.at).map(function(i){ return { k:'e_at_'+i, p:S.p['e_at_'+i]||{}, lbl:'관리팀장' }; }));
-  if (gmKeys.length) gDefs.push({ name:'공무·관리', keys:gmKeys });
-
+  if (gmKeys.length) gDefs.push({ name:'공무·관리 (관리감독자)', keys:gmKeys });
   var qmKeys = range(S.c.qm).map(function(i){ return { k:'e_qm_'+i, p:S.p['e_qm_'+i]||{}, lbl:'품질관리자' }; });
   if (qmKeys.length) gDefs.push({ name:'품질', keys:qmKeys });
 
-  var glayouts = gDefs.map(function(g) {
-    var cols = Math.min(g.keys.length, 4);
-    var rows2 = Math.ceil(g.keys.length/cols);
-    var gw = cols*(SNW+GAP)-GAP+24;
-    var gh = rows2*(SNH+8)-8+40;
-    return { g:g, cols:cols, rows2:rows2, gw:gw, gh:gh };
+  var glayouts = gDefs.map(function(g){
+    var cols=Math.min(g.keys.length,4), rows2=Math.ceil(g.keys.length/cols);
+    return { g:g, cols:cols, rows2:rows2, gw:cols*(SNW+GAP)-GAP+24, gh:rows2*(SNH+8)-8+40 };
   });
 
-  var l2TotalW = l2.length*(NW+GAP)-GAP;
-  var gdTotalW = glayouts.reduce(function(s,gl){ return s+gl.gw+GAP; },0)-GAP;
-  var W = Math.max(l2TotalW, gdTotalW) + PAD*2 + 60;
-  W = Math.max(W, 800);
-  var maxGH = glayouts.reduce(function(m,gl){ return Math.max(m,gl.gh); },0);
+  // 너비 계산
+  var staffW = staffList.length*(NW+GAP)-GAP;
+  var lineW  = lineList.length*(NW+GAP)-GAP;
+  var gdW    = glayouts.length>0 ? glayouts.reduce(function(s,gl){ return s+gl.gw+GAP; },0)-GAP : 0;
+  var maxGH  = glayouts.reduce(function(m,gl){ return Math.max(m,gl.gh); },0);
+  var rowW   = staffW + (staffList.length>0&&lineList.length>0 ? MGAP : 0) + lineW;
+  var W = Math.max(rowW, gdW) + PAD*2 + 40;
+  W = Math.max(W, 820);
 
-  var y0=PAD, y1=y0+NH+VG, y2=y1+NH+VG+16, H=y2+maxGH+PAD;
+  var y0=PAD, y1=y0+NH+VG, y2=y1+NH+VG+8;
+  var H = y2 + (maxGH>0?maxGH:0) + PAD + 24;
 
-  var gStartX = W/2-gdTotalW/2;
-  glayouts.forEach(function(gl){ gl.x=gStartX; gStartX+=gl.gw+GAP; });
+  // X 위치
+  var rowStartX = W/2 - rowW/2;
+  var staffStartX = rowStartX;
+  var lineStartX  = rowStartX + staffW + (staffList.length>0 ? MGAP : 0);
+  var staffCXs = staffList.map(function(_,i){ return staffStartX+i*(NW+GAP)+NW/2; });
+  var lineCXs  = lineList.map(function(_,i){  return lineStartX+i*(NW+GAP)+NW/2;  });
+  var allCXs   = staffCXs.concat(lineCXs);
+  var siteCX   = allCXs.length>0 ? (allCXs[0]+allCXs[allCXs.length-1])/2 : W/2;
+  var lineCenterX = lineCXs.length>0 ? (lineCXs[0]+lineCXs[lineCXs.length-1])/2 : W/2;
+  var gdStartX = lineCenterX - gdW/2;
+  glayouts.forEach(function(gl){ gl.x=gdStartX; gdStartX+=gl.gw+GAP; });
 
+  var cy0 = y0+NH/2;
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:'+FK+';display:block">';
 
-  var cx0=W/2, cy0=y0+NH/2;
+  // 연결선: 소장 → 참모 & 라인 (모두 같은 레벨, 모두 현장소장 직속)
+  var midY = cy0+NH/2+VG/2;
+  svg += vline(siteCX, cy0+NH/2, midY, LC);
+  if (allCXs.length>1) svg += hline(allCXs[0], allCXs[allCXs.length-1], midY, LC);
+  allCXs.forEach(function(cx){ svg += vline(cx, midY, y1, LC); });
 
-  var l2Nodes = l2.map(function(d,i) {
-    var totalW=l2.length*(NW+GAP)-GAP;
-    var cx=W/2-totalW/2+i*(NW+GAP)+NW/2;
-    return { cx:cx, cy:y1+NH/2, d:d };
-  });
+  // 팀장 → 반원 그룹
+  if (glayouts.length>0 && lineCXs.length>0) {
+    var midY12 = y1+NH+(y2-y1-NH)/2;
+    svg += vline(lineCenterX, y1+NH, midY12, LC);
+    if (glayouts.length>1) svg += hline(glayouts[0].x+glayouts[0].gw/2, glayouts[glayouts.length-1].x+glayouts[glayouts.length-1].gw/2, midY12, LC);
+    glayouts.forEach(function(gl){ svg += vline(gl.x+gl.gw/2, midY12, y2, LC); });
+  }
 
-  // 연결선
-  var midY01 = cy0+NH/2+VG/2;
-  svg += vline(cx0, cy0+NH/2, midY01, LC);
-  if (l2Nodes.length>1) svg += hline(l2Nodes[0].cx, l2Nodes[l2Nodes.length-1].cx, midY01, LC);
-  l2Nodes.forEach(function(n){ svg += vline(n.cx, midY01, n.cy-NH/2, LC); });
+  // 참모 ↔ 라인 점선 (지도·조언 관계)
+  if (staffCXs.length>0 && lineCXs.length>0) {
+    var dotY = y1+NH/2, sx=staffCXs[staffCXs.length-1]+NW/2, tx=lineCXs[0]-NW/2;
+    if (tx>sx+8) {
+      svg += '<line x1="'+sx+'" y1="'+dotY+'" x2="'+tx+'" y2="'+dotY+'" stroke="#B0BEC5" stroke-width="1.2" stroke-dasharray="5 3"/>';
+      var mx=(sx+tx)/2;
+      svg += '<rect x="'+(mx-25)+'" y="'+(dotY-8)+'" width="50" height="14" rx="3" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="0.5"/>';
+      svg += '<text x="'+mx+'" y="'+dotY+'" text-anchor="middle" dominant-baseline="central" font-size="8.5" fill="#90A4AE" font-family="'+FK+'">지도·조언</text>';
+    }
+  }
 
-  var midY12 = y1+NH+VG/2;
-  svg += vline(W/2, y1+NH, midY12, LC);
-  if (glayouts.length>1) svg += hline(glayouts[0].x+glayouts[0].gw/2, glayouts[glayouts.length-1].x+glayouts[glayouts.length-1].gw/2, midY12, LC);
-  glayouts.forEach(function(gl){ svg += vline(gl.x+gl.gw/2, midY12, y2, LC); });
+  // 참모/라인 구분 레이블
+  if (staffCXs.length>0) {
+    var sLX=staffStartX+staffW/2;
+    svg += '<rect x="'+(sLX-30)+'" y="'+(y1-18)+'" width="60" height="13" rx="3" fill="'+SC+'"/>';
+    svg += '<text x="'+sLX+'" y="'+(y1-11)+'" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="'+SCT+'" font-family="'+FK+'">참모기관</text>';
+  }
+  if (lineCXs.length>0) {
+    var lLX=lineStartX+lineW/2;
+    svg += '<rect x="'+(lLX-30)+'" y="'+(y1-18)+'" width="60" height="13" rx="3" fill="'+BRL+'"/>';
+    svg += '<text x="'+lLX+'" y="'+(y1-11)+'" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="'+BRD+'" font-family="'+FK+'">관리감독자</text>';
+  }
 
   // 노드
-  svg += topNode(cx0, cy0, NW+20, NH, '안전보건총괄책임자', site.name||'(미입력)', site.tel||'', 'e_site', BR, BRD, FK, MK);
-  l2Nodes.forEach(function(n) {
-    svg += midNode(n.cx, n.cy, NW, NH, n.d.lbl, n.d.p.name||'(미입력)', n.d.p.tel||'', n.d.k, BRL, BRM, BRD, FK, MK);
+  svg += topNode(siteCX, cy0, NW+20, NH, '안전보건총괄책임자 · 현장소장', site.name||'(미입력)', site.tel||'', 'e_site', BR, BRD, FK, MK);
+
+  staffCXs.forEach(function(cx,i){
+    var d=staffList[i];
+    svg += midNode(cx, y1+NH/2, NW, NH, d.lbl, d.p.name||'(미입력)', d.p.tel||'', d.k, SC, SCS, SCT, FK, MK);
+  });
+  lineCXs.forEach(function(cx,i){
+    var d=lineList[i];
+    svg += midNode(cx, y1+NH/2, NW, NH, d.lbl, d.p.name||'(미입력)', d.p.tel||'', d.k, BRL, BRM, BRD, FK, MK);
   });
 
-  glayouts.forEach(function(gl) {
+  glayouts.forEach(function(gl){
     var gx=gl.x, gy=y2;
     svg += '<rect x="'+gx+'" y="'+gy+'" width="'+gl.gw+'" height="'+gl.gh+'" rx="10" fill="#F8FAFB" stroke="#E2E6EA" stroke-width="1"/>';
     svg += '<text x="'+(gx+gl.gw/2)+'" y="'+(gy+18)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#9AA3AE" font-family="'+FK+'">'+esc(gl.g.name)+'</text>';
-    gl.g.keys.forEach(function(m,idx) {
+    gl.g.keys.forEach(function(m,idx){
       var col=idx%gl.cols, r2=Math.floor(idx/gl.cols);
-      var nx=gx+12+col*(SNW+GAP), ny=gy+28+r2*(SNH+8);
-      svg += snNode(nx, ny, gl.g.cols < gl.g.keys.length ? SNW : SNW, SNH, m.lbl, m.p.name||'(미입력)', m.k, FK);
+      svg += snNode(gx+12+col*(SNW+GAP), gy+28+r2*(SNH+8), SNW, SNH, m.lbl, m.p.name||'(미입력)', m.k, FK);
     });
   });
+
+  // 법적 근거
+  svg += '<text x="'+W/2+'" y="'+(H-8)+'" text-anchor="middle" font-size="8.5" fill="#B0BEC5" font-family="'+FK+'">산업안전보건법 제15조·제16조·제17조·제18조·제62조 | 중대재해처벌법 제4조 | 점선(─ ─): 지도·조언 관계</text>';
 
   svg += '</svg>';
   document.getElementById('safety-wrap').innerHTML = svg;
@@ -662,14 +703,14 @@ function escHtml(s) { return esc(s); }
 
 // ===== 직무확인서 =====
 var D1_GD = ['현장안전보건목표 참여','현장방침 및 추진계획 참여','위험성평가서 1차검토','안전교육참석 및 교육실시','비상사태계획 검토/훈련참석','사고보고서 작성','성과측정수립대책에 따라 실행'];
-var D2_GD = ['사업장내 관리감독자가 지휘·감독하는 작업과 관련된 기계·기구 또는 설비의 점검 및 이상 유무의 확인','관리감독자에게 소속된 근로자의 작업복·보호구 및 방호장치의 점검과 그 착용·사용에 관한 교육·지도','해당 사업장의 산업보건의·안전관리자 및 보건관리자의 지도·조언에 대한 협조','법 제41조의2에 따른 위험성평가를 위한 업무에 기인하는 유해 위험요소의 파악 및 그 결과에 따른 개선조치의 시행'];
+var D2_GD = ['관리감독자가 지휘·감독하는 작업에 관련된 기계·기구 또는 설비의 안전·보건 점검 및 이상 유무의 확인','관리감독자에게 소속된 근로자의 작업복·보호구 및 방호장치의 점검과 그 착용·사용에 관한 교육·지도','해당 작업에서 발생한 산업재해에 관한 보고 및 이에 대한 응급조치','해당 작업의 작업장 정리·정돈 및 통로 확보에 대한 확인·감독','해당 사업장의 산업보건의·안전관리자 및 보건관리자의 지도·조언에 대한 협조','법 제36조에 따른 위험성평가를 위한 업무에 기인하는 유해·위험요인의 파악 및 그 결과에 따른 개선조치의 시행'];
 
 function getTmpl(k) {
-  if (k==='e_site') return { t:'안전보건관리책임자/안전보건총괄책임자 직무확인서', s1:'◎ 안전보건관리책임자 업무분장 (산업안전보건법 제15조제1항)', d1:['산업재해 예방계획의 수립에 관한 사항','안전보건관리규정의 작성 및 변경에 관한 사항','근로자의 안전·보건교육에 관한 사항','작업환경측정 등 작업환경의 점검 및 개선에 관한 사항','근로자의 건강진단 등 건강관리에 관한 사항','산업재해의 원인 조사 및 재발 방지대책 수립에 관한 사항','안전·보건과 관련된 안전장치 및 보호구 구입 시의 적격품 여부 확인에 관한 사항','안전관리자와 보건관리자를 지휘·감독','법 제36조에 따른 위험성평가의 실시에 관한 사항'], s2:'◎ 안전보건총괄책임자 업무분장', d2:['작업의 중지 및 재개','도급사업 시의 산업재해 예방조치','수급인의 산업안전보건관리비의 집행 감독 및 협의·조정','안전인증대상 기계·기구등의 사용 여부 확인','위험성평가의 실시에 관한 사항'] };
-  if (k.startsWith('e_sm_')) return { t:'안전관리자 직무확인서', s1:'◎ 안전보건 업무분장', d1:['현장안전보건목표 참여','현장방침 및 추진계획 참여','위험성평가서 2차검토','안전교육참석 및 교육실시','비상사태계획 검토/훈련참석','사고보고서 작성','성과측정수립대책에 따라 실행'], s2:'◎ 안전보건활동 업무분장', d2:D2_GD };
+  if (k==='e_site') return { t:'안전보건관리책임자/안전보건총괄책임자 직무확인서', s1:'◎ 안전보건관리책임자 업무분장 (산업안전보건법 제15조제1항)', d1:['산업재해 예방계획의 수립에 관한 사항','안전보건관리규정의 작성 및 변경에 관한 사항','근로자의 안전·보건교육에 관한 사항','작업환경측정 등 작업환경의 점검 및 개선에 관한 사항','근로자의 건강진단 등 건강관리에 관한 사항','산업재해의 원인 조사 및 재발 방지대책 수립에 관한 사항','안전·보건과 관련된 안전장치 및 보호구 구입 시의 적격품 여부 확인에 관한 사항','안전관리자와 보건관리자를 지휘·감독','법 제36조에 따른 위험성평가의 실시에 관한 사항'], s2:'◎ 안전보건총괄책임자 업무분장 (산업안전보건법 제62조)', d2:['위험성평가의 실시에 관한 사항 (법 제36조)','산업재해 예방을 위한 수급인 소속 근로자의 안전·보건에 관한 조치','수급인이 사용하는 기계·기구 또는 설비의 안전·보건 관련 법령 준수 지도','작업장 순회 점검 및 안전·보건상 유해·위험요인에 대한 조치','수급인이 실시하는 근로자 안전·보건교육에 대한 지도와 지원','작업의 중지 및 재개','도급사업 시의 산업재해 예방조치','수급인의 산업안전보건관리비의 집행 감독 및 협의·조정'] };
+  if (k.startsWith('e_sm_')) return { t:'안전관리자 직무확인서', s1:'◎ 안전보건 업무분장', d1:['현장안전보건목표 참여','현장방침 및 추진계획 참여','위험성평가서 2차검토','안전교육참석 및 교육실시','비상사태계획 검토/훈련참석','사고보고서 작성','성과측정수립대책에 따라 실행'], s2:'◎ 안전관리자 법정 직무 (산업안전보건법 시행령 제18조)', d2:['안전에 관한 기술적 사항에 관하여 안전보건관리책임자를 보좌하고 관리감독자에게 지도·조언','위험성평가에 관한 보좌 및 지도·조언 (법 제36조)','안전인증대상 기계·기구등 구입 시 적격품 선정에 관한 보좌 및 지도·조언','해당 사업장 안전교육계획의 수립 및 안전교육 실시에 관한 보좌 및 지도·조언','사업장 순회점검, 지도 및 조치 건의','산업재해 발생의 원인 조사·분석 및 재발 방지를 위한 기술적 지도·조언','산업재해에 관한 통계의 유지·관리·분석을 위한 보좌 및 지도·조언','법령으로 정한 안전에 관한 사항의 이행에 관한 보좌 및 지도·조언','업무 수행 내용의 기록·유지'] };
   if (k.startsWith('e_hm_')) return { t:'보건관리자 직무확인서', s1:'◎ 안전보건 업무분장', d1:['현장안전보건목표 참여','보건관리 계획 수립 및 시행','건강진단 실시 및 사후관리','직업성 질환 예방 및 관리','근로자 건강 상담 및 교육','보건 관련 기록 유지'], s2:'◎ 보건관리자 직무', d2:['근로자의 건강보호 및 증진을 위한 업무','건강진단 결과에 따른 조치','보호구의 지급 및 착용 지도','작업환경 측정 실시 및 결과 보고'] };
-  if (k.startsWith('e_gt_')||k.startsWith('e_ct_')||k.startsWith('e_at_')) return { t:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_GD.map(function(d,i){ return i===2?'위험성평가서 2차검토':d; }), s2:'◎ 관리감독자 직무', d2:D2_GD };
-  if (k.startsWith('e_qm_')||k.startsWith('gd_')) return { t:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_GD, s2:'◎ 관리감독자 직무', d2:D2_GD };
+  if (k.startsWith('e_gt_')||k.startsWith('e_ct_')||k.startsWith('e_at_')) return { t:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_GD.map(function(d,i){ return i===2?'위험성평가서 2차검토':d; }), s2:'◎ 관리감독자 법정 직무 (산업안전보건법 시행령 제15조)', d2:D2_GD };
+  if (k.startsWith('e_qm_')||k.startsWith('gd_')) return { t:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_GD, s2:'◎ 관리감독자 법정 직무 (산업안전보건법 시행령 제15조)', d2:D2_GD };
   return null;
 }
 
@@ -794,25 +835,26 @@ function goDoc(k) {
 // ═══════════════════════════════════════════
 var D1_SITE_S1 = '◎ 안전보건관리책임자 업무분장 (산업안전보건법 제15조제1항)';
 var D1_SITE = ['산업재해 예방계획의 수립에 관한 사항','안전보건관리규정의 작성 및 변경에 관한 사항','근로자의 안전·보건교육에 관한 사항','작업환경측정 등 작업환경의 점검 및 개선에 관한 사항','근로자의 건강진단 등 건강관리에 관한 사항','산업재해의 원인 조사 및 재발 방지대책 수립에 관한 사항','안전·보건과 관련된 안전장치 및 보호구 구입 시의 적격품 여부 확인에 관한 사항','안전관리자와 보건관리자를 지휘·감독','법 제36조에 따른 위험성평가의 실시에 관한 사항'];
-var D2_SITE_S2 = '◎ 안전보건총괄책임자 업무분장';
-var D2_SITE = ['작업의 중지 및 재개','도급사업 시의 산업재해 예방조치','수급인의 산업안전보건관리비의 집행 감독 및 협의·조정','안전인증대상 기계·기구등의 사용 여부 확인','위험성평가의 실시에 관한 사항'];
+var D2_SITE_S2 = '◎ 안전보건총괄책임자 업무분장 (산업안전보건법 제62조)';
+var D2_SITE = ['위험성평가의 실시에 관한 사항 (법 제36조)','산업재해 예방을 위한 수급인 소속 근로자의 안전·보건에 관한 조치','수급인이 사용하는 기계·기구 또는 설비의 안전·보건 관련 법령 준수 지도','작업장 순회 점검 및 안전·보건상 유해·위험요인에 대한 조치','수급인이 실시하는 근로자 안전·보건교육에 대한 지도와 지원','작업의 중지 및 재개','도급사업 시의 산업재해 예방조치','수급인의 산업안전보건관리비의 집행 감독 및 협의·조정'];
 var D1_SM_S1 = '◎ 안전보건 업무분장';
 var D1_SM = ['현장안전보건목표 참여','현장방침 및 추진계획 참여','위험성평가서 2차검토','안전교육참석 및 교육실시','비상사태계획 검토/훈련참석','사고보고서 작성','성과측정수립대책에 따라 실행'];
-var D2_SM_S2 = '◎ 안전보건활동 업무분장';
+var D2_SM_S2 = '◎ 안전관리자 법정 직무 (산업안전보건법 시행령 제18조)';
+var D2_SM_LIST = ['안전에 관한 기술적 사항에 관하여 안전보건관리책임자를 보좌하고 관리감독자에게 지도·조언','위험성평가에 관한 보좌 및 지도·조언 (법 제36조)','안전인증대상 기계·기구등 구입 시 적격품 선정에 관한 보좌 및 지도·조언','해당 사업장 안전교육계획의 수립 및 안전교육 실시에 관한 보좌 및 지도·조언','사업장 순회점검, 지도 및 조치 건의','산업재해 발생의 원인 조사·분석 및 재발 방지를 위한 기술적 지도·조언','산업재해에 관한 통계의 유지·관리·분석을 위한 보좌 및 지도·조언','법령으로 정한 안전에 관한 사항의 이행에 관한 보좌 및 지도·조언','업무 수행 내용의 기록·유지'];
 var D1_HM_S1 = '◎ 안전보건 업무분장';
 var D1_HM = ['현장안전보건목표 참여','보건관리 계획 수립 및 시행','건강진단 실시 및 사후관리','직업성 질환 예방 및 관리','근로자 건강 상담 및 교육','보건 관련 기록 유지'];
-var D2_HM_S2 = '◎ 보건관리자 직무';
-var D2_HM = ['근로자의 건강보호 및 증진을 위한 업무','건강진단 결과에 따른 조치','보호구의 지급 및 착용 지도','작업환경 측정 실시 및 결과 보고'];
+var D2_HM_S2 = '◎ 보건관리자 법정 직무 (산업안전보건법 시행령 제22조)';
+var D2_HM = ['근로자의 신체적 피로와 정신적 스트레스 등이 원인이 되어 발생하는 건강장해 예방','건강진단 실시 및 건강진단 결과에 따른 근로자 건강 관리','근로자의 건강보호 및 증진을 위한 계획 수립·시행','근로자 건강 상담 및 건강장해 예방에 관한 교육','작업환경 측정 실시 및 결과 보고','보호구의 지급 및 착용 지도','근로자에 대한 응급처치 및 사고사망자 등에 대한 기록 유지'];
 var D1_MGR = ['현장안전보건목표 참여','현장방침 및 추진계획 참여','위험성평가서 2차검토','안전교육참석 및 교육실시','비상사태계획 검토/훈련참석','사고보고서 작성','성과측정수립대책에 따라 실행'];
 var D1_GD_LIST = ['현장안전보건목표 참여','현장방침 및 추진계획 참여','위험성평가서 1차검토','안전교육참석 및 교육실시','비상사태계획 검토/훈련참석','사고보고서 작성','성과측정수립대책에 따라 실행'];
-var D2_GD_LIST = ['사업장내 관리감독자가 지휘·감독하는 작업과 관련된 기계·기구 또는 설비의 점검 및 이상 유무의 확인','관리감독자에게 소속된 근로자의 작업복·보호구 및 방호장치의 점검과 그 착용·사용에 관한 교육·지도','해당 사업장의 산업보건의·안전관리자 및 보건관리자의 지도·조언에 대한 협조','법 제41조의2에 따른 위험성평가를 위한 업무에 기인하는 유해 위험요소의 파악 및 그 결과에 따른 개선조치의 시행'];
+var D2_GD_LIST = ['관리감독자가 지휘·감독하는 작업에 관련된 기계·기구 또는 설비의 안전·보건 점검 및 이상 유무의 확인','관리감독자에게 소속된 근로자의 작업복·보호구 및 방호장치의 점검과 그 착용·사용에 관한 교육·지도','해당 작업에서 발생한 산업재해에 관한 보고 및 이에 대한 응급조치','해당 작업의 작업장 정리·정돈 및 통로 확보에 대한 확인·감독','해당 사업장의 산업보건의·안전관리자 및 보건관리자의 지도·조언에 대한 협조','법 제36조에 따른 위험성평가를 위한 업무에 기인하는 유해·위험요인의 파악 및 그 결과에 따른 개선조치의 시행'];
 
 function getDocxTmpl(key) {
   if (key === 'e_site') return { title:'안전보건관리책임자/안전보건총괄책임자 직무확인서', s1:D1_SITE_S1, d1:D1_SITE, s2:D2_SITE_S2, d2:D2_SITE };
-  if (key.startsWith('e_sm_')) return { title:'안전관리자 직무확인서', s1:D1_SM_S1, d1:D1_SM, s2:D2_SM_S2, d2:D2_GD_LIST };
+  if (key.startsWith('e_sm_')) return { title:'안전관리자 직무확인서', s1:D1_SM_S1, d1:D1_SM, s2:D2_SM_S2, d2:D2_SM_LIST };
   if (key.startsWith('e_hm_')) return { title:'보건관리자 직무확인서', s1:D1_HM_S1, d1:D1_HM, s2:D2_HM_S2, d2:D2_HM };
-  if (key.startsWith('e_gt_')||key.startsWith('e_ct_')||key.startsWith('e_at_')) return { title:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_MGR, s2:'◎ 관리감독자 직무', d2:D2_GD_LIST };
-  return { title:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_GD_LIST, s2:'◎ 관리감독자 직무', d2:D2_GD_LIST };
+  if (key.startsWith('e_gt_')||key.startsWith('e_ct_')||key.startsWith('e_at_')) return { title:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_MGR, s2:'◎ 관리감독자 법정 직무 (산업안전보건법 시행령 제15조)', d2:D2_GD_LIST };
+  return { title:'관리감독자 직무확인서', s1:'◎ 안전보건 업무분장', d1:D1_GD_LIST, s2:'◎ 관리감독자 법정 직무 (산업안전보건법 시행령 제15조)', d2:D2_GD_LIST };
 }
 
 function buildDocxDoc(key, person) {
