@@ -488,104 +488,131 @@ function renderOrg() {
 
 function renderSafetyOrg() {
   buildKeys();
-  var t=document.getElementById('safety-title'); if(t) t.textContent=(S.siteName?S.siteName+' ':'')+'안전보건관리기구 조직도';
-  var NW=150, NH=72, SNW=100, SNH=44, GAP=10, VG=38, PAD=28, MGAP=36;
-  var BR='#00B0CA', BRD='#008FA5', BRL='#E0F7FA', BRM='#B2EBF2', LC='#CBD1D8';
-  var SC='#E8F5E9', SCS='#81C784', SCT='#2E7D32';
-  var FK='Malgun Gothic,Apple SD Gothic Neo,sans-serif', MK='Consolas,monospace';
+  var t = document.getElementById('safety-title');
+  if (t) t.textContent = (S.siteName ? S.siteName + ' ' : '') + '안전보건관리기구 조직도';
 
-  var site = S.p['e_site']||{};
+  // ── 레이아웃 상수 ───────────────────────────────────────────────
+  var A4W = 740, PAD = 22, VG = 48;
+  var NGAP = 10, GPAD = 12, GHDR = 40, GGAP = 30;
+  var TOP_H = 76, NH = 72;
 
-  // 참모기관: 안전관리자 + 보건관리자 (현장소장 보좌 — 산업안전보건법 제17조·제18조)
+  // ── 색상 ────────────────────────────────────────────────────────
+  var SITE_F = '#0277BD', SITE_S = '#01579B';          // 현장소장
+  var SG_F = '#F1F8E9', SG_S = '#66BB6A', SG_T = '#2E7D32';  // 참모 그룹
+  var LG_F = '#E3F2FD', LG_S = '#42A5F5', LG_T = '#1565C0';  // 라인 그룹
+  var SF = '#FFFFFF',   SS = '#43A047',   ST_C = '#2E7D32';   // 참모 노드
+  var LF = '#FFFFFF',   LS = '#1976D2',   LT_C = '#1565C0';   // 라인 노드
+  var LC = '#B0BEC5';
+  var FK = 'Malgun Gothic,Apple SD Gothic Neo,sans-serif';
+  var MK = 'Consolas,monospace';
+
+  var site = S.p['e_site'] || {};
+
+  // ── 데이터 ──────────────────────────────────────────────────────
   var staffList = [];
-  range(S.c.sm).forEach(function(i){ staffList.push({ p:S.p['e_sm_'+i]||{}, lbl:'안전관리자', k:'e_sm_'+i }); });
-  if (S.c.hm===0) {
-    staffList.push({ p:{ name:'미정' }, lbl:'보건관리자', k:null });
+  range(S.c.sm).forEach(function(i) { staffList.push({ p: S.p['e_sm_'+i]||{}, lbl: '안전관리자', k: 'e_sm_'+i }); });
+  if (S.c.hm === 0) {
+    staffList.push({ p: { name: '미정' }, lbl: '보건관리자', k: null });
   } else {
-    range(S.c.hm).forEach(function(i){ staffList.push({ p:S.p['e_hm_'+i]||{}, lbl:'보건관리자', k:'e_hm_'+i }); });
+    range(S.c.hm).forEach(function(i) { staffList.push({ p: S.p['e_hm_'+i]||{}, lbl: '보건관리자', k: 'e_hm_'+i }); });
   }
-
-  // 라인기관: 관리감독자 팀장들 (현장소장 직속 — 산업안전보건법 제16조)
   var lineList = [];
-  range(S.c.gt).forEach(function(i){ lineList.push({ p:S.p['e_gt_'+i]||{}, lbl:'공무팀장', k:'e_gt_'+i }); });
-  range(S.c.ct).forEach(function(i){ lineList.push({ p:S.p['e_ct_'+i]||{}, lbl:'공사팀장', k:'e_ct_'+i }); });
-  range(S.c.at).forEach(function(i){ lineList.push({ p:S.p['e_at_'+i]||{}, lbl:'관리팀장', k:'e_at_'+i }); });
-  range(S.c.qm).forEach(function(i){ lineList.push({ p:S.p['e_qm_'+i]||{}, lbl:'품질관리자', k:'e_qm_'+i }); });
+  range(S.c.gt).forEach(function(i) { lineList.push({ p: S.p['e_gt_'+i]||{}, lbl: '공무팀장',  k: 'e_gt_'+i }); });
+  range(S.c.ct).forEach(function(i) { lineList.push({ p: S.p['e_ct_'+i]||{}, lbl: '공사팀장',  k: 'e_ct_'+i }); });
+  range(S.c.at).forEach(function(i) { lineList.push({ p: S.p['e_at_'+i]||{}, lbl: '관리팀장',  k: 'e_at_'+i }); });
+  range(S.c.qm).forEach(function(i) { lineList.push({ p: S.p['e_qm_'+i]||{}, lbl: '품질관리자', k: 'e_qm_'+i }); });
 
-  // A4 width constraint: dynamically size nodes to fit 740px
-  var A4W = 740;
-  var groupGap = (staffList.length>0 && lineList.length>0) ? MGAP : 0;
-  var innerGaps = (staffList.length>1 ? (staffList.length-1)*GAP : 0)
-                + (lineList.length>1 ? (lineList.length-1)*GAP : 0);
-  var totalNodes = staffList.length + lineList.length;
-  var dynNW = totalNodes > 0
-    ? Math.min(NW, Math.floor((A4W - PAD*2 - groupGap - innerGaps) / totalNodes))
-    : NW;
-  NW = Math.max(dynNW, 80);
+  var sN = staffList.length, lN = lineList.length;
 
-  var staffW = staffList.length>0 ? staffList.length*(NW+GAP)-GAP : 0;
-  var lineW  = lineList.length>0  ? lineList.length*(NW+GAP)-GAP  : 0;
-  var rowW   = staffW + groupGap + lineW;
-  var W = Math.max(rowW + PAD*2, A4W);
+  // ── 노드 너비 동적 계산 (A4 740px 기준) ────────────────────────
+  var overhead = 2*PAD + GGAP + 4*GPAD
+               + (sN > 1 ? (sN-1)*NGAP : 0)
+               + (lN > 1 ? (lN-1)*NGAP : 0);
+  var nodeW = (sN + lN) > 0
+    ? Math.max(90, Math.min(140, Math.floor((A4W - overhead) / (sN + lN))))
+    : 120;
 
-  var y0=PAD, y1=y0+NH+VG;
-  var H = y1 + NH + PAD + 20;
+  // ── 그룹 박스 너비 ───────────────────────────────────────────────
+  var sGW = sN > 0 ? sN*(nodeW+NGAP) - NGAP + 2*GPAD : 0;
+  var lGW = lN > 0 ? lN*(nodeW+NGAP) - NGAP + 2*GPAD : 0;
+  var totalGW = sGW + (sN>0 && lN>0 ? GGAP : 0) + lGW;
+  var W = Math.max(A4W, totalGW + 2*PAD);
 
-  // X 위치
-  var rowStartX = W/2 - rowW/2;
-  var staffStartX = rowStartX;
-  var lineStartX  = rowStartX + staffW + groupGap;
-  var staffCXs = staffList.map(function(_,i){ return staffStartX+i*(NW+GAP)+NW/2; });
-  var lineCXs  = lineList.map(function(_,i){  return lineStartX+i*(NW+GAP)+NW/2;  });
-  var allCXs   = staffCXs.concat(lineCXs);
-  var siteCX   = allCXs.length>0 ? (allCXs[0]+allCXs[allCXs.length-1])/2 : W/2;
+  // ── Y 좌표 ───────────────────────────────────────────────────────
+  var groupH = GHDR + GPAD + NH + GPAD;
+  var y0 = PAD;
+  var y1 = y0 + TOP_H + VG;          // 그룹 박스 상단
+  var nodY = y1 + GHDR + GPAD + NH/2; // 노드 중심 y
+  var H = y1 + groupH + PAD + 26;
 
-  var cy0 = y0+NH/2;
+  // ── X 좌표 ───────────────────────────────────────────────────────
+  var gStartX = W/2 - totalGW/2;
+  var sGX = gStartX;
+  var lGX  = gStartX + sGW + (sN>0 && lN>0 ? GGAP : 0);
+  var sGCX = sN > 0 ? sGX + sGW/2 : W/2;
+  var lGCX = lN > 0 ? lGX + lGW/2 : W/2;
+  var siteCX = W/2;
+  var topW = Math.max(250, nodeW + 90); // 현장소장 박스는 충분히 넓게
+
+  var staffCXs = range(sN).map(function(i) { return sGX + GPAD + i*(nodeW+NGAP) + nodeW/2; });
+  var lineCXs  = range(lN).map(function(i) { return lGX + GPAD + i*(nodeW+NGAP) + nodeW/2; });
+
+  var cy0 = y0 + TOP_H/2;
   var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" style="font-family:'+FK+';display:block">';
 
-  // 연결선: 소장 → 참모 & 라인 (모두 같은 레벨, 모두 현장소장 직속)
-  var midY = cy0+NH/2+VG/2;
-  svg += vline(siteCX, cy0+NH/2, midY, LC);
-  if (allCXs.length>1) svg += hline(allCXs[0], allCXs[allCXs.length-1], midY, LC);
-  allCXs.forEach(function(cx){ svg += vline(cx, midY, y1, LC); });
+  // ── 연결선: 현장소장 → T자 분기 → 두 그룹 ─────────────────────
+  var midY = cy0 + TOP_H/2 + Math.round(VG * 0.52);
+  svg += vline(siteCX, cy0+TOP_H/2, midY, LC);
+  if (sN > 0 && lN > 0) {
+    // siteCX가 sGCX~lGCX 사이에 있으므로 hline이 T자 형성
+    svg += hline(sGCX, lGCX, midY, LC);
+  } else {
+    var gcx = sN > 0 ? sGCX : lGCX;
+    svg += hline(Math.min(siteCX, gcx), Math.max(siteCX, gcx), midY, LC);
+  }
+  if (sN > 0) svg += vline(sGCX, midY, y1, LC);
+  if (lN > 0) svg += vline(lGCX, midY, y1, LC);
 
-  // 참모 ↔ 라인 점선 (지도·조언 관계)
-  if (staffCXs.length>0 && lineCXs.length>0) {
-    var dotY = y1+NH/2, sx=staffCXs[staffCXs.length-1]+NW/2, tx=lineCXs[0]-NW/2;
-    if (tx>sx+8) {
-      svg += '<line x1="'+sx+'" y1="'+dotY+'" x2="'+tx+'" y2="'+dotY+'" stroke="#B0BEC5" stroke-width="1.2" stroke-dasharray="5 3"/>';
-      var mx=(sx+tx)/2;
-      svg += '<rect x="'+(mx-25)+'" y="'+(dotY-8)+'" width="50" height="14" rx="3" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="0.5"/>';
-      svg += '<text x="'+mx+'" y="'+dotY+'" text-anchor="middle" dominant-baseline="central" font-size="8.5" fill="#90A4AE" font-family="'+FK+'">지도·조언</text>';
-    }
+  // ── 참모기관 그룹 박스 ──────────────────────────────────────────
+  if (sN > 0) {
+    svg += '<rect x="'+sGX+'" y="'+y1+'" width="'+sGW+'" height="'+groupH+'" rx="10" fill="'+SG_F+'" stroke="'+SG_S+'" stroke-width="1.5"/>';
+    svg += '<text x="'+(sGX+sGW/2)+'" y="'+(y1+13)+'" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="'+SG_T+'" font-family="'+FK+'">참모기관</text>';
+    svg += '<text x="'+(sGX+sGW/2)+'" y="'+(y1+28)+'" text-anchor="middle" dominant-baseline="central" font-size="8.5" fill="'+SG_T+'" opacity="0.75" font-family="'+FK+'">산업안전보건법 제17조·제18조</text>';
+    svg += '<line x1="'+(sGX+8)+'" y1="'+(y1+GHDR)+'" x2="'+(sGX+sGW-8)+'" y2="'+(y1+GHDR)+'" stroke="'+SG_S+'" stroke-width="0.8"/>';
   }
 
-  // 참모/라인 구분 레이블
-  if (staffCXs.length>0) {
-    var sLX=staffStartX+staffW/2;
-    svg += '<rect x="'+(sLX-30)+'" y="'+(y1-18)+'" width="60" height="13" rx="3" fill="'+SC+'"/>';
-    svg += '<text x="'+sLX+'" y="'+(y1-11)+'" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="'+SCT+'" font-family="'+FK+'">참모기관</text>';
-  }
-  if (lineCXs.length>0) {
-    var lLX=lineStartX+lineW/2;
-    svg += '<rect x="'+(lLX-30)+'" y="'+(y1-18)+'" width="60" height="13" rx="3" fill="'+BRL+'"/>';
-    svg += '<text x="'+lLX+'" y="'+(y1-11)+'" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="'+BRD+'" font-family="'+FK+'">관리감독자</text>';
+  // ── 관리감독자 그룹 박스 ────────────────────────────────────────
+  if (lN > 0) {
+    svg += '<rect x="'+lGX+'" y="'+y1+'" width="'+lGW+'" height="'+groupH+'" rx="10" fill="'+LG_F+'" stroke="'+LG_S+'" stroke-width="1.5"/>';
+    svg += '<text x="'+(lGX+lGW/2)+'" y="'+(y1+13)+'" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="'+LG_T+'" font-family="'+FK+'">관리감독자</text>';
+    svg += '<text x="'+(lGX+lGW/2)+'" y="'+(y1+28)+'" text-anchor="middle" dominant-baseline="central" font-size="8.5" fill="'+LG_T+'" opacity="0.75" font-family="'+FK+'">산업안전보건법 제16조</text>';
+    svg += '<line x1="'+(lGX+8)+'" y1="'+(y1+GHDR)+'" x2="'+(lGX+lGW-8)+'" y2="'+(y1+GHDR)+'" stroke="'+LG_S+'" stroke-width="0.8"/>';
   }
 
-  // 노드
-  svg += topNode(siteCX, cy0, NW+20, NH, '안전보건총괄책임자 · 현장소장', site.name||'(미입력)', site.tel||'', 'e_site', BR, BRD, FK, MK);
+  // ── 그룹 간 지도·조언 점선 ──────────────────────────────────────
+  if (sN > 0 && lN > 0) {
+    var dotY = y1 + groupH/2;
+    var dotX1 = sGX + sGW + 2, dotX2 = lGX - 2;
+    svg += '<line x1="'+dotX1+'" y1="'+dotY+'" x2="'+dotX2+'" y2="'+dotY+'" stroke="#BDBDBD" stroke-width="1.5" stroke-dasharray="5 3"/>';
+  }
 
-  staffCXs.forEach(function(cx,i){
-    var d=staffList[i];
-    svg += midNode(cx, y1+NH/2, NW, NH, d.lbl, d.p.name||'(미입력)', d.p.tel||'', d.k, SC, SCS, SCT, FK, MK);
+  // ── 현장소장 노드 (그룹 박스 위에 렌더링) ────────────────────────
+  svg += topNode(siteCX, cy0, topW, TOP_H, '안전보건총괄책임자 · 현장소장', site.name||'(미입력)', site.tel||'', 'e_site', SITE_F, SITE_S, FK, MK);
+
+  // ── 참모기관 노드 ────────────────────────────────────────────────
+  staffCXs.forEach(function(cx, i) {
+    var d = staffList[i];
+    svg += midNode(cx, nodY, nodeW, NH, d.lbl, d.p.name||'(미입력)', d.p.tel||'', d.k, SF, SS, ST_C, FK, MK);
   });
-  lineCXs.forEach(function(cx,i){
-    var d=lineList[i];
-    svg += midNode(cx, y1+NH/2, NW, NH, d.lbl, d.p.name||'(미입력)', d.p.tel||'', d.k, BRL, BRM, BRD, FK, MK);
+
+  // ── 관리감독자 노드 ──────────────────────────────────────────────
+  lineCXs.forEach(function(cx, i) {
+    var d = lineList[i];
+    svg += midNode(cx, nodY, nodeW, NH, d.lbl, d.p.name||'(미입력)', d.p.tel||'', d.k, LF, LS, LT_C, FK, MK);
   });
 
-  // 법적 근거
-  svg += '<text x="'+W/2+'" y="'+(H-8)+'" text-anchor="middle" font-size="8.5" fill="#B0BEC5" font-family="'+FK+'">산업안전보건법 제15조·제16조·제17조·제18조·제62조 | 중대재해처벌법 제4조 | 점선(─ ─): 지도·조언 관계</text>';
+  // ── 법적 근거 ────────────────────────────────────────────────────
+  svg += '<text x="'+W/2+'" y="'+(H-9)+'" text-anchor="middle" font-size="8" fill="#B0BEC5" font-family="'+FK+'">산업안전보건법 제15조·제16조·제17조·제18조·제62조 | 중대재해처벌법 제4조 | 점선(─ ─): 참모↔라인 지도·조언 관계</text>';
 
   svg += '</svg>';
   document.getElementById('safety-wrap').innerHTML = svg;
